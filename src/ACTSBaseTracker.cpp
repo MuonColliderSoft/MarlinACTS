@@ -4,6 +4,7 @@
 #include <DD4hep/Detector.h>
 
 #include <UTIL/LCTrackerConf.h>
+#include <IMPL/LCFlagImpl.h>
 
 #include <Acts/Definitions/Units.hpp>
 #include <Acts/Geometry/CylinderVolumeBuilder.hpp>
@@ -50,6 +51,10 @@ ACTSBaseTracker::ACTSBaseTracker(const string& procname) :
     registerOutputCollection(LCIO::TRACK, "TrackCollectionName", "Name of track output collection.",
                              _outputTrackCollection, string("Tracks"));
 
+    registerProcessorParameter("CaloFace_Radius", "ECAL Inner Radius (mm).", _caloFaceR, _caloFaceR);
+
+    registerProcessorParameter("CaloFace_Z", "ECAL half length (mm).", _caloFaceZ, _caloFaceZ);
+
     _magCache = _magneticField->makeCache(_magneticFieldContext);
 }
 
@@ -67,6 +72,7 @@ void ACTSBaseTracker::init()
 
     _runNumber = 0;
     _eventNumber = 0;
+    _fitFails = 0;
 
     printParameters();
 
@@ -88,6 +94,23 @@ void ACTSBaseTracker::init()
 
     _geoIDMappingTool = std::make_shared<GeometryIdMappingTool>(
         lcio::LCTrackerCellID::encoding_string(), dSchema);
+
+    Navigator::Config navigatorCfg { trackingGeometry() };
+    navigatorCfg.resolvePassive = false;
+    navigatorCfg.resolveMaterial = true;
+    navigatorCfg.resolveSensitive = true;
+
+    Stepper stepper(magneticField());
+    Navigator navigator(navigatorCfg);
+
+    propagator.reset(new Propagator(std::move(stepper), std::move(navigator)));
+
+    perigeeSurface = Acts::Surface::makeShared<Acts::PerigeeSurface>(Acts::Vector3 {0., 0., 0.});
+
+    trackCollection.reset(new LCCollectionVec(LCIO::TRACK));
+    LCFlagImpl trkFlag(0);
+    trkFlag.setBit(LCIO::TRBIT_HITS);
+    trackCollection->setFlag(trkFlag.getFlag());
 }
 
 void ACTSBaseTracker::buildDetector()

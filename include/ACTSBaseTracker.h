@@ -7,9 +7,18 @@
 #include <Acts/MagneticField/MagneticFieldProvider.hpp>
 #include <Acts/Plugins/TGeo/TGeoDetectorElement.hpp>
 #include <Acts/Utilities/CalibrationContext.hpp>
+#include <Acts/Propagator/EigenStepper.hpp>
+#include <Acts/Propagator/Navigator.hpp>
+#include <Acts/Propagator/Propagator.hpp>
+#include <Acts/Surfaces/PerigeeSurface.hpp>
+
 #include <marlin/Processor.h>
 
 #include "GeometryIdMappingTool.h"
+
+#include <IMPL/LCCollectionVec.h>
+
+#include <memory>
 
 using MarlinACTS::GeometryIdMappingTool;
 using std::string;
@@ -36,6 +45,11 @@ public:
     virtual void end();
 
 protected:
+    using Stepper = Acts::EigenStepper<>;
+    using Navigator = Acts::Navigator;
+    using Propagator = Acts::Propagator<Stepper, Navigator>;
+    using PropagatorPtr = std::shared_ptr<Propagator>;
+
     string _matFile {};
     string _tgeoFile = "data/MuSIC_v2.root";
     string _tgeodescFile = "data/MuSIC_v2.json";
@@ -46,6 +60,16 @@ protected:
 
     uint32_t _eventNumber;
     uint32_t _runNumber;
+    uint32_t _fitFails;
+
+    float _caloFaceR = 1857; //mm
+    float _caloFaceZ = 2307; //mm
+
+    PropagatorPtr propagator;
+
+    std::shared_ptr<LCCollectionVec> trackCollection;
+
+    std::shared_ptr<Acts::PerigeeSurface> perigeeSurface;
 
     std::shared_ptr<GeometryIdMappingTool> geoIDMappingTool() const { return _geoIDMappingTool; }
 
@@ -64,6 +88,8 @@ protected:
     LCCollection* getCollection(const string& collectionName, LCEvent* evt);
 
     Acts::Vector3 magneticFieldValue(const Acts::Vector3 position);
+
+    virtual void storeData(LCEvent* evt) { evt->addCollection(trackCollection.get(), _outputTrackCollection); }
 
 private:
     void buildDetector();
