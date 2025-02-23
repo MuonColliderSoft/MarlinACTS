@@ -5,6 +5,9 @@
 
 #include <UTIL/LCTrackerConf.h>
 #include <IMPL/LCFlagImpl.h>
+#include <IMPL/TrackImpl.h>
+#include <IMPL/TrackStateImpl.h>
+#include <UTIL/CellIDDecoder.h>
 
 #include <Acts/Definitions/Units.hpp>
 #include <Acts/Geometry/CylinderVolumeBuilder.hpp>
@@ -24,6 +27,7 @@
 #include <Acts/Utilities/BinningType.hpp>
 
 #include "Helpers.h"
+#include "SourceLink.h"
 
 #include <string>
 
@@ -394,5 +398,141 @@ void ACTSBaseTracker::end() {
     streamlog_out(MESSAGE) << " end()  " << name() << " processed "
                            << _eventNumber << " events in " << _runNumber
                            << " runs " << std::endl;
+}
+
+EVENT::Track* ACTSBaseTracker::convert_track(const TrackResult& fitter_res)
+{
+    IMPL::TrackImpl* track = new IMPL::TrackImpl;
+
+    track->setChi2(fitter_res.chi2());
+    track->setNdf(fitter_res.nDoF());
+    track->setNholes(fitter_res.nHoles());
+
+    const Acts::Vector3 zeroPos(0, 0, 0);
+    const Acts::BoundVector& params = fitter_res.parameters();
+    const Acts::BoundMatrix& covariance = fitter_res.covariance();
+    EVENT::TrackState* trackStateAtIP = convert_state(
+        EVENT::TrackState::AtIP,
+        params, covariance, zeroPos);
+    track->trackStates().push_back(trackStateAtIP);
+
+    EVENT::TrackerHitVec hitsOnTrack;
+    EVENT::TrackStateVec statesOnTrack;
+
+    for (const auto& trk_state : fitter_res.trackStatesReversed())
+    {
+        if (!trk_state.hasUncalibratedSourceLink()) continue;
+
+        auto sl = trk_state.getUncalibratedSourceLink()
+                           .get<MarlinACTS::SourceLink>();
+        EVENT::TrackerHit* curr_hit = sl.lciohit();
+        hitsOnTrack.push_back(curr_hit);
+
+        const Acts::Vector3 hitPos(curr_hit->getPosition()[0],
+                                   curr_hit->getPosition()[1],
+                                   curr_hit->getPosition()[2]);
+
+        EVENT::TrackState* trackState = convert_state(
+            EVENT::TrackState::AtOther,
+            trk_state.parameters(), trk_state.covariance(), hitPos);
+        statesOnTrack.push_back(trackState);
+    }
+
+    // TODO missing state at calo
+
+    std::reverse(hitsOnTrack.begin(), hitsOnTrack.end());
+    std::reverse(statesOnTrack.begin(), statesOnTrack.end());
+
+    UTIL::CellIDDecoder<lcio::TrackerHit> decoder(
+        lcio::LCTrackerCellID::encoding_string());
+    EVENT::IntVec& subdetectorHitNumbers = track->subdetectorHitNumbers();
+    subdetectorHitNumbers.resize(7, 0);
+
+    for (EVENT::TrackerHit* hit : hitsOnTrack)
+    {
+        track->addHit(hit);
+
+        uint32_t sysid = decoder(hit)["system"];
+        if (subdetectorHitNumbers.size() <= sysid)
+        {
+            subdetectorHitNumbers.resize(sysid + 1, 0);
+        }
+        subdetectorHitNumbers[sysid]++;
+    }
+
+    if (statesOnTrack.size() > 0)
+    {
+        dynamic_cast<IMPL::TrackStateImpl*>(statesOnTrack.back())
+        ->setLocation(EVENT::TrackState::AtLastHit);
+        dynamic_cast<IMPL::TrackStateImpl*>(statesOnTrack.front())
+        ->setLocation(EVENT::TrackState::AtFirstHit);
+    }
+
+    EVENT::TrackStateVec& myTrackStates = track->trackStates();
+    myTrackStates.insert(myTrackStates.end(), statesOnTrack.begin(),
+                   statesOnTrack.end());
+
+    return track;
+}
+
+EVENT::TrackState* ACTSBaseTracker::convert_state(int location,
+    const Acts::BoundVector& value, const Acts::BoundMatrix& cov,
+    Acts::Vector3 mag_pos)
+{
+    double Bz = magneticFieldValue(mag_pos)[2] / Acts::UnitConstants::T;
+
+    IMPL::TrackStateImpl* trackState = new IMPL::TrackStateImpl();
+    trackState->setLocation(location);
+
+    // Central values
+    double d0 = value[Acts::eBoundLoc0];
+    double z0 = value[Acts::eBoundLoc1];
+    double phi = value[Acts::eBoundPhi];
+    double theta = value[Acts::eBoundTheta];
+    double qoverp = value[Acts::eBoundQOverP];
+
+    double p = 1e3 / qoverp;
+    double omega = (0.3 * Bz) / (p * std::sin(theta));
+    double lambda = M_PI / 2 - theta;
+    double tanlambda = std::tan(lambda);
+
+    trackState->setPhi(phi);
+    trackState->setTanLambda(tanlambda);
+    trackState->setOmega(omega);
+    trackState->setD0(d0);
+    trackState->setZ0(z0);
+
+    // Uncertainties (covariance matrix)
+    Acts::ActsMatrix<6, 6> jac = Acts::ActsMatrix<6, 6>::Zero();
+
+    jac(0, Acts::eBoundLoc0) = 1;
+    jac(1, Acts::eBoundPhi) = 1;
+    jac(2, Acts::eBoundTheta) = omega / std::tan(theta);
+    jac(2, Acts::eBoundQOverP) = omega / qoverp;
+    jac(3, Acts::eBoundLoc1) = 1;
+    jac(4, Acts::eBoundTheta) = std::pow(1 / std::cos(lambda), 2);
+
+    Acts::ActsMatrix<6, 6> trcov = (jac * cov * jac.transpose());
+
+    EVENT::FloatVec lcioCov(15, 0);
+    lcioCov[0] = trcov(0, 0);
+    lcioCov[1] = trcov(0, 1);
+    lcioCov[2] = trcov(1, 1);
+    lcioCov[3] = trcov(0, 2);
+    lcioCov[4] = trcov(1, 2);
+    lcioCov[5] = trcov(2, 2);
+    lcioCov[6] = trcov(0, 3);
+    lcioCov[7] = trcov(1, 3);
+    lcioCov[8] = trcov(2, 3);
+    lcioCov[9] = trcov(3, 3);
+    lcioCov[10] = trcov(0, 4);
+    lcioCov[11] = trcov(1, 4);
+    lcioCov[12] = trcov(2, 4);
+    lcioCov[13] = trcov(3, 4);
+    lcioCov[14] = trcov(4, 4);
+
+    trackState->setCovMatrix(lcioCov);
+
+    return trackState;
 }
 

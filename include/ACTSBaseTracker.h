@@ -11,12 +11,16 @@
 #include <Acts/Propagator/Navigator.hpp>
 #include <Acts/Propagator/Propagator.hpp>
 #include <Acts/Surfaces/PerigeeSurface.hpp>
+#include <Acts/EventData/VectorTrackContainer.hpp>
+#include <Acts/EventData/VectorMultiTrajectory.hpp>
 
 #include <marlin/Processor.h>
 
 #include "GeometryIdMappingTool.h"
 
 #include <IMPL/LCCollectionVec.h>
+#include <EVENT/Track.h>
+#include <EVENT/TrackState.h>
 
 #include <memory>
 
@@ -49,6 +53,10 @@ protected:
     using Navigator = Acts::Navigator;
     using Propagator = Acts::Propagator<Stepper, Navigator>;
     using PropagatorPtr = std::shared_ptr<Propagator>;
+    using TrackResult = Acts::TrackContainer<Acts::VectorTrackContainer,
+                                             Acts::VectorMultiTrajectory,
+                                             std::shared_ptr>::TrackProxy;
+
 
     string _matFile {};
     string _tgeoFile = "data/MuSIC_v2.root";
@@ -90,6 +98,11 @@ protected:
     Acts::Vector3 magneticFieldValue(const Acts::Vector3 position);
 
     virtual void storeData(LCEvent* evt) { evt->addCollection(trackCollection.get(), _outputTrackCollection); }
+
+    virtual EVENT::Track* convert_track(const TrackResult& fitter_res);
+    virtual EVENT::TrackState* convert_state(int location, const Acts::BoundVector& value,
+                                             const Acts::BoundMatrix& cov, Acts::Vector3 mag_pos);
+
 
 private:
     void buildDetector();

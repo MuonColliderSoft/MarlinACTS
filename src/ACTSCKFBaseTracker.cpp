@@ -203,8 +203,7 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
                 continue;
             }
 
-            EVENT::Track* track = nullptr;     //TODO implementation required
-            trackCollection->addElement(track);
+            trackCollection->addElement(convert_track(trackTip));
         }
     }
 
