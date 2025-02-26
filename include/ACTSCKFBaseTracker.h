@@ -3,12 +3,15 @@
 
 #include "ACTSBaseTracker.h"
 #include "SourceLink.h"
+#include "Measurement.h"
 
 #include "Acts/Propagator/MaterialInteractor.hpp"
 #include <Acts/TrackFinding/CombinatorialKalmanFilter.hpp>
 #include <Acts/TrackFitting/GainMatrixUpdater.hpp>
 #include <Acts/EventData/VectorTrackContainer.hpp>
 #include <Acts/EventData/VectorMultiTrajectory.hpp>
+
+using std::vector;
 
 class ACTSCKFBaseTracker : public ACTSBaseTracker
 {
@@ -31,6 +34,9 @@ protected:
 
     using CKF = Acts::CombinatorialKalmanFilter<Propagator, TrackContainer>;
     using CKFPtr = std::shared_ptr<CKF>;
+    using SeedParamList = vector<Acts::BoundTrackParameters>;
+
+    virtual SeedParamList getSeeds(const MarlinACTS::MeasurementContainer& m_list) = 0;
 
     double _CKF_chi2CutOff = 15;
     int32_t _CKF_numMeasurementsCutOff = 10;

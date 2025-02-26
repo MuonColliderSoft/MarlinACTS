@@ -49,7 +49,9 @@ ADD_DEFINITIONS( "-Wno-long-long -Wno-effc++ -Wno-unused-parameter -Wno-narrowin
 # sources
 ADD_LIBRARY(MarlinACTS SHARED src/ACTSBaseTracker.cpp
                               src/ACTSCKFBaseTracker.cpp
+                              src/ACTSCKFSeededTracker.cpp
                               src/GeometryIdMappingTool.cpp
+                              src/GeometryIdSelector.cpp
                               src/Helpers.cpp)
 
 TARGET_INCLUDE_DIRECTORIES(MarlinACTS PRIVATE

@@ -135,7 +135,7 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
      *  Seed setup
      ******************************************************************************************* */
 
-    std::vector<Acts::BoundTrackParameters> seeds;
+    auto seeds = getSeeds(measurements);
 
     /* ********************************************************************************************
      *  CKF setup

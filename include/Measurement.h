@@ -61,18 +61,18 @@ public:
         const Eigen::MatrixBase<covariance_t>& cov) :
         m_source(std::move(source))
     {
-    static_assert(kSize == parameters_t::RowsAtCompileTime, "Parameter size mismatch");
-    static_assert(kSize == covariance_t::RowsAtCompileTime, "Covariance rows mismatch");
-    static_assert(kSize == covariance_t::ColsAtCompileTime, "Covariance cols mismatch");
+        static_assert(kSize == parameters_t::RowsAtCompileTime, "Parameter size mismatch");
+        static_assert(kSize == covariance_t::RowsAtCompileTime, "Covariance rows mismatch");
+        static_assert(kSize == covariance_t::ColsAtCompileTime, "Covariance cols mismatch");
 
-    m_subspaceIndices.resize(subspaceIndices.size());
-    std::transform(subspaceIndices.begin(), subspaceIndices.end(),
-                   m_subspaceIndices.begin(), [](auto index) {
-                       return static_cast<SubspaceIndex>(index);
-                   });
+        m_subspaceIndices.resize(subspaceIndices.size());
+        std::transform(subspaceIndices.begin(), subspaceIndices.end(),
+                       m_subspaceIndices.begin(), [](auto index) {
+                           return static_cast<SubspaceIndex>(index);
+                       });
 
-    parameters<kSize>() = params;
-    covariance<kSize>() = cov;
+        parameters<kSize>() = params;
+        covariance<kSize>() = cov;
     }
 
     VariableSizeMeasurement() = delete;
