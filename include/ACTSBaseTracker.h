@@ -75,8 +75,6 @@ protected:
 
     PropagatorPtr propagator;
 
-    std::shared_ptr<LCCollectionVec> trackCollection;
-
     std::shared_ptr<Acts::PerigeeSurface> perigeeSurface;
 
     std::shared_ptr<GeometryIdMappingTool> geoIDMappingTool() const { return _geoIDMappingTool; }
@@ -97,7 +95,9 @@ protected:
 
     Acts::Vector3 magneticFieldValue(const Acts::Vector3 position);
 
-    virtual void storeData(LCEvent* evt) { evt->addCollection(trackCollection.get(), _outputTrackCollection); }
+    virtual void store_track(EVENT::Track* track) { trackCollection->addElement(track); }
+    virtual void clean_tracks() { trackCollection->clear(); }
+    virtual void flush_data(LCEvent* evt) { evt->addCollection(trackCollection.get(), _outputTrackCollection); }
 
     virtual EVENT::Track* convert_track(const TrackResult& fitter_res);
     virtual EVENT::TrackState* convert_state(int location, const Acts::BoundVector& value,
@@ -108,6 +108,8 @@ private:
     void buildDetector();
 
     void buildBfield();
+
+    std::shared_ptr<LCCollectionVec> trackCollection;
 
     std::shared_ptr<GeometryIdMappingTool> _geoIDMappingTool;
 

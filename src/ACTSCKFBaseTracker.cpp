@@ -203,9 +203,9 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
                 continue;
             }
 
-            trackCollection->addElement(convert_track(trackTip));
+            store_track(convert_track(trackTip));
         }
     }
 
-    storeData(evt);
+    flush_data(evt);
 }
