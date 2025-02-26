@@ -7,9 +7,10 @@
 using SSPoint = MarlinACTS::SeedSpacePoint;
 using SSPointGrid = Acts::CylindricalSpacePointGrid<SSPoint>;
 
+ACTSCKFSeededTracker aACTSCKFSeededTracker;
 
-ACTSCKFSeededTracker::ACTSCKFSeededTracker(const string& procname) :
-    ACTSCKFBaseTracker(procname)
+ACTSCKFSeededTracker::ACTSCKFSeededTracker() :
+    ACTSCKFBaseTracker("ACTSCKFSeededTracker")
 {
     registerProcessorParameter("SeedFinding_RMax", "Maximum radius of hits to consider.",
                                _seedFinding_rMax, 150.f);

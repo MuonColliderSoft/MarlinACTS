@@ -13,7 +13,9 @@ class ACTSCKFSeededTracker : public ACTSCKFBaseTracker
 public:
     ACTSCKFSeededTracker(const ACTSCKFSeededTracker&) = delete;
     ACTSCKFSeededTracker& operator=(const ACTSCKFSeededTracker&) = delete;
-    ACTSCKFSeededTracker(const string& procname);
+    ACTSCKFSeededTracker();
+
+    virtual marlin::Processor *newProcessor() { return new ACTSCKFSeededTracker; }
 
     virtual void init() override;
 
