@@ -187,7 +187,8 @@ void ACTSCKFSeededTracker::init()
 
 }
 
-ACTSCKFBaseTracker::SeedParamList ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list)
+ACTSCKFBaseTracker::SeedParamList
+ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, LCEvent* evt)
 {
     /* ********************************************************************************************
      *  Space points
@@ -209,7 +210,8 @@ ACTSCKFBaseTracker::SeedParamList ACTSCKFSeededTracker::getSeeds(const MarlinACT
 
         const double* lcioglobalpos = lciohit->getPosition();
         Acts::Vector3 globalPos = { lcioglobalpos[0], lcioglobalpos[1], lcioglobalpos[2] };
-        Acts::RotationMatrix3 rotLocalToGlobal = surface->referenceFrame(geometryContext(), globalPos, {0, 0, 0});
+        Acts::RotationMatrix3 rotLocalToGlobal = surface->referenceFrame(geometryContext(),
+                                                                         globalPos, {0, 0, 0});
 
         // Convert to a seed space point
         // the space point requires only the variance of the transverse and

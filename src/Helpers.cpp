@@ -57,5 +57,32 @@ ZBinSchema parseZBinSchema(std::string schema_str)
     return result;
 }
 
+Acts::ParticleHypothesis getParticleHypothesis(const EVENT::MCParticle* mcParticle)
+{
+    switch (std::abs(mcParticle->getPDG())) {
+    case 11:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::eElectron};
+    case 13:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::eMuon};
+    case 15:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::eTau};
+    case 22:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::eGamma};
+    case 111:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::ePionZero};
+    case 211:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::ePionPlus};
+    case 2112:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::eNeutron};
+    case 2212:
+        return Acts::ParticleHypothesis {Acts::PdgParticle::eProton};
+    }
+
+    Acts::PdgParticle pdg = Acts::PdgParticle::eInvalid;
+    float mass = 0.0f;
+    Acts::AnyCharge charge_type { 0.0f };
+    return Acts::ParticleHypothesis { pdg, mass, charge_type };
+}
+
 } //namespace MarlinACTS
 

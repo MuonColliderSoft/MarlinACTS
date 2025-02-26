@@ -20,7 +20,8 @@ public:
     virtual void init() override;
 
 protected:
-    virtual SeedParamList getSeeds(const MarlinACTS::MeasurementContainer& m_list) override;
+    virtual SeedParamList getSeeds(const MarlinACTS::MeasurementContainer& m_list,
+                                   LCEvent* evt) override;
 
 private:
     float _seedFinding_rMax;

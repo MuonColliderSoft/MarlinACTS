@@ -135,7 +135,7 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
      *  Seed setup
      ******************************************************************************************* */
 
-    auto seeds = getSeeds(measurements);
+    auto seeds = getSeeds(measurements, evt);
 
     /* ********************************************************************************************
      *  CKF setup
