@@ -11,6 +11,8 @@
 #include <Acts/Propagator/Navigator.hpp>
 #include <Acts/Propagator/Propagator.hpp>
 #include <Acts/Surfaces/PerigeeSurface.hpp>
+#include <Acts/Surfaces/CylinderSurface.hpp>
+#include <Acts/Surfaces/DiscSurface.hpp>
 #include <Acts/EventData/VectorTrackContainer.hpp>
 #include <Acts/EventData/VectorMultiTrajectory.hpp>
 
@@ -70,13 +72,14 @@ protected:
     uint32_t _runNumber;
     uint32_t _fitFails;
 
-    float _caloFaceR = 1857; //mm
-    float _caloFaceZ = 2307; //mm
-
     PropagatorPtr propagator;
 
     std::shared_ptr<Acts::PerigeeSurface> perigeeSurface;
 
+    std::shared_ptr<Acts::CylinderSurface> caloSurface;
+    std::shared_ptr<Acts::DiscSurface> caloCapL;
+    std::shared_ptr<Acts::DiscSurface> caloCapR;
+    
     std::shared_ptr<GeometryIdMappingTool> geoIDMappingTool() const { return _geoIDMappingTool; }
 
     const Acts::MagneticFieldContext& magneticFieldContext() const { return _magneticFieldContext; }
@@ -122,6 +125,10 @@ private:
     std::shared_ptr<const Acts::TrackingGeometry> _trackingGeometry = nullptr;
 
     Acts::CalibrationContext _calibrationContext;
+
+    float _caloFaceR;
+    float _caloFaceZ;
+
 };
 
 #endif //ACTSBASETRACKER_H

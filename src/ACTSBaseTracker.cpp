@@ -24,6 +24,7 @@
 #include <Acts/Plugins/Json/JsonMaterialDecorator.hpp>
 #include <Acts/Plugins/TGeo/TGeoDetectorElement.hpp>
 #include <Acts/Plugins/TGeo/TGeoLayerBuilder.hpp>
+#include "Acts/Propagator/MaterialInteractor.hpp"
 #include <Acts/Utilities/BinningType.hpp>
 
 #include "Helpers.h"
@@ -46,7 +47,8 @@ ACTSBaseTracker::ACTSBaseTracker(const string& procname) :
     registerProcessorParameter("TGeoDescFile", "Path to the JSON file describing the subdetectors.",
                                _tgeodescFile, _tgeodescFile);
 
-    registerProcessorParameter("DetectorSchema", "Detector schema name (MuColl_v1, MAIA_v0, MuSIC_v1, MuSIC_v2).",
+    registerProcessorParameter("DetectorSchema",
+                               "Detector schema name (MuColl_v1, MAIA_v0, MuSIC_v1, MuSIC_v2).",
                                _detSchema, _detSchema);
 
     registerInputCollections(LCIO::TRACKERHITPLANE, "TrackerHitCollectionNames",
@@ -55,9 +57,9 @@ ACTSBaseTracker::ACTSBaseTracker(const string& procname) :
     registerOutputCollection(LCIO::TRACK, "TrackCollectionName", "Name of track output collection.",
                              _outputTrackCollection, string("Tracks"));
 
-    registerProcessorParameter("CaloFace_Radius", "ECAL Inner Radius (mm).", _caloFaceR, _caloFaceR);
+    registerProcessorParameter("CaloFace_Radius", "ECAL Inner Radius (mm).", _caloFaceR, 1857.f);
 
-    registerProcessorParameter("CaloFace_Z", "ECAL half length (mm).", _caloFaceZ, _caloFaceZ);
+    registerProcessorParameter("CaloFace_Z", "ECAL half length (mm).", _caloFaceZ, 2307.f);
 
     _magCache = _magneticField->makeCache(_magneticFieldContext);
 }
@@ -68,6 +70,11 @@ const Acts::Surface* ACTSBaseTracker::findSurface(const EVENT::TrackerHit* hit) 
     return _trackingGeometry->findSurface(moduleGeoId);
 }
 
+/* ********************************************************************************************
+ *
+ * Processor initialization
+ *
+ * ******************************************************************************************** */
 void ACTSBaseTracker::init()
 {
     _matFile = MarlinACTS::findFile(_matFile);
@@ -111,12 +118,25 @@ void ACTSBaseTracker::init()
 
     perigeeSurface = Acts::Surface::makeShared<Acts::PerigeeSurface>(Acts::Vector3 {0., 0., 0.});
 
+    auto caloCylinder = std::make_shared<Acts::CylinderBounds>(_caloFaceR, _caloFaceZ);
+    caloSurface = Acts::Surface::makeShared<Acts::CylinderSurface>(Acts::Transform3::Identity(), caloCylinder);
+
+    Acts::Translation3 circlePositionL(0, 0, -_caloFaceZ);
+    Acts::Translation3 circlePositionR(0, 0, _caloFaceZ);
+    caloCapL = Acts::Surface::makeShared<Acts::DiscSurface>(Acts::Transform3(circlePositionL), 0. , _caloFaceR);
+    caloCapR = Acts::Surface::makeShared<Acts::DiscSurface>(Acts::Transform3(circlePositionR), 0. , _caloFaceR);
+    
     trackCollection.reset(new LCCollectionVec(LCIO::TRACK));
     LCFlagImpl trkFlag(0);
     trkFlag.setBit(LCIO::TRBIT_HITS);
     trackCollection->setFlag(trkFlag.getFlag());
 }
 
+/* ********************************************************************************************
+ *
+ * Detector geometry conversion
+ *
+ * ******************************************************************************************** */
 void ACTSBaseTracker::buildDetector()
 {
     Acts::Logging::Level surfaceLogLevel = Acts::Logging::INFO;
@@ -364,6 +384,11 @@ void ACTSBaseTracker::buildDetector()
 
 }
 
+/* ********************************************************************************************
+ *
+ * Magnetic field from DD4Hep
+ *
+ * ******************************************************************************************** */
 void ACTSBaseTracker::buildBfield()
 {
     dd4hep::Detector& lcdd = dd4hep::Detector::getInstance();
@@ -400,6 +425,11 @@ void ACTSBaseTracker::end() {
                            << " runs " << std::endl;
 }
 
+/* ********************************************************************************************
+ *
+ * Tracks conversion
+ *
+ * ******************************************************************************************** */
 EVENT::Track* ACTSBaseTracker::convert_track(const TrackResult& fitter_res)
 {
     IMPL::TrackImpl* track = new IMPL::TrackImpl;
@@ -408,14 +438,19 @@ EVENT::Track* ACTSBaseTracker::convert_track(const TrackResult& fitter_res)
     track->setNdf(fitter_res.nDoF());
     track->setNholes(fitter_res.nHoles());
 
+    /* ********************************************************************************************
+     *  Track state at IP
+     ******************************************************************************************* */
     const Acts::Vector3 zeroPos(0, 0, 0);
     const Acts::BoundVector& params = fitter_res.parameters();
     const Acts::BoundMatrix& covariance = fitter_res.covariance();
-    EVENT::TrackState* trackStateAtIP = convert_state(
-        EVENT::TrackState::AtIP,
-        params, covariance, zeroPos);
+    EVENT::TrackState* trackStateAtIP = convert_state(EVENT::TrackState::AtIP,
+                                                      params, covariance, zeroPos);
     track->trackStates().push_back(trackStateAtIP);
 
+    /* ********************************************************************************************
+     *  Track states in the middle
+     ******************************************************************************************* */
     EVENT::TrackerHitVec hitsOnTrack;
     EVENT::TrackStateVec statesOnTrack;
 
@@ -432,14 +467,57 @@ EVENT::Track* ACTSBaseTracker::convert_track(const TrackResult& fitter_res)
                                    curr_hit->getPosition()[1],
                                    curr_hit->getPosition()[2]);
 
-        EVENT::TrackState* trackState = convert_state(
-            EVENT::TrackState::AtOther,
-            trk_state.parameters(), trk_state.covariance(), hitPos);
+        EVENT::TrackState* trackState = convert_state(EVENT::TrackState::AtOther,
+                                                      trk_state.parameters(), trk_state.covariance(),
+                                                      hitPos);
         statesOnTrack.push_back(trackState);
     }
 
-    // TODO missing state at calo
+    /* ********************************************************************************************
+     *  Track state at calorimeter
+     ******************************************************************************************* */
 
+    double d0 = params[Acts::eBoundLoc0];
+    double z0 = params[Acts::eBoundLoc1];
+    double phi = params[Acts::eBoundPhi];
+    double theta = params[Acts::eBoundTheta];
+    Acts::Vector3 pos(d0 * cos(phi), d0 * sin(phi), z0);
+
+    Acts::CurvilinearTrackParameters start(Acts::VectorHelpers::makeVector4(pos, params[Acts::eBoundTime]),
+                                           phi, theta, params[Acts::eBoundQOverP],
+                                           covariance, Acts::ParticleHypothesis::pion());
+
+    Propagator::template Options<Acts::ActionList<Acts::MaterialInteractor>,
+                                 Acts::AbortList<Acts::EndOfWorldReached>>
+	    caloPropOptions(geometryContext(), magneticFieldContext());
+    caloPropOptions.pathLimit = 20 * Acts::UnitConstants::m;               // TODO missing conf. parameter
+
+    auto resultProp = propagator->propagate(start, *caloSurface, caloPropOptions);
+    if (!resultProp.ok())
+    {
+        resultProp = propagator->propagate(start, 
+                                           (theta > M_PI/2) ? *caloCapL : *caloCapR, caloPropOptions);
+    }
+
+    if (resultProp.ok())
+    {
+        auto end_parameters = resultProp.value().endParameters;
+        const Acts::BoundMatrix& atCaloCovariance = *(end_parameters->covariance());
+
+        EVENT::TrackState* trackStateAtCalo = convert_state(EVENT::TrackState::AtCalorimeter,
+                                                            end_parameters->parameters(),
+                                                            atCaloCovariance,
+                                                            zeroPos);   //TODO same field as in IP, is it correct??
+        track->trackStates().push_back(trackStateAtCalo);
+    }
+    else
+    {
+        streamlog_out(DEBUG) << "Failed propagation to calorimeter!" << std::endl;
+    }
+
+    /* ********************************************************************************************
+     *  Track conversion
+     ******************************************************************************************* */
     std::reverse(hitsOnTrack.begin(), hitsOnTrack.end());
     std::reverse(statesOnTrack.begin(), statesOnTrack.end());
 
