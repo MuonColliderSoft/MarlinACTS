@@ -61,7 +61,6 @@ ACTSBaseTracker::ACTSBaseTracker(const string& procname) :
 
     registerProcessorParameter("CaloFace_Z", "ECAL half length (mm).", _caloFaceZ, 2307.f);
 
-    _magCache = _magneticField->makeCache(_magneticFieldContext);
 }
 
 const Acts::Surface* ACTSBaseTracker::findSurface(const EVENT::TrackerHit* hit) const
@@ -95,6 +94,8 @@ void ACTSBaseTracker::init()
     buildDetector();
 
     streamlog_out(MESSAGE) << " -------------------------------------" << std::endl;
+
+    _magCache = _magneticField->makeCache(_magneticFieldContext);
 
     DetSchema dSchema;
     if (_detSchema == "MuSIC_v1") dSchema = DetSchema::MuSIC_v1;
