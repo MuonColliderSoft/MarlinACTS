@@ -4,7 +4,6 @@
 #include <DD4hep/Detector.h>
 
 #include <UTIL/LCTrackerConf.h>
-#include <IMPL/LCFlagImpl.h>
 #include <IMPL/TrackImpl.h>
 #include <IMPL/TrackStateImpl.h>
 #include <UTIL/CellIDDecoder.h>
@@ -126,11 +125,6 @@ void ACTSBaseTracker::init()
     Acts::Translation3 circlePositionR(0, 0, _caloFaceZ);
     caloCapL = Acts::Surface::makeShared<Acts::DiscSurface>(Acts::Transform3(circlePositionL), 0. , _caloFaceR);
     caloCapR = Acts::Surface::makeShared<Acts::DiscSurface>(Acts::Transform3(circlePositionR), 0. , _caloFaceR);
-    
-    trackCollection.reset(new LCCollectionVec(LCIO::TRACK));
-    LCFlagImpl trkFlag(0);
-    trkFlag.setBit(LCIO::TRBIT_HITS);
-    trackCollection->setFlag(trkFlag.getFlag());
 }
 
 /* ********************************************************************************************

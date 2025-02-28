@@ -4,6 +4,7 @@
 #include <Acts/TrackFinding/MeasurementSelector.hpp>
 
 #include <IMPL/TrackImpl.h>
+#include <IMPL/LCFlagImpl.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 
 #include "Measurement.h"
@@ -161,6 +162,11 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
      *  Track finding
      ******************************************************************************************* */
 
+    LCCollectionVec* trackCollection = new LCCollectionVec(LCIO::TRACK);
+    LCFlagImpl trkFlag(0);
+    trkFlag.setBit(LCIO::TRBIT_HITS);
+    trackCollection->setFlag(trkFlag.getFlag());
+
     auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
     auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
     TrackContainer tracks(trackContainer, trackStateContainer);
@@ -203,9 +209,9 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
                 continue;
             }
 
-            store_track(convert_track(trackTip));
+            trackCollection->addElement(convert_track(trackTip));
         }
     }
 
-    flush_data(evt);
+    evt->addCollection(trackCollection, _outputTrackCollection);
 }

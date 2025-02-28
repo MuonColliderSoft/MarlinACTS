@@ -98,10 +98,6 @@ protected:
 
     Acts::Vector3 magneticFieldValue(const Acts::Vector3 position);
 
-    virtual void store_track(EVENT::Track* track) { trackCollection->addElement(track); }
-    virtual void clean_tracks() { trackCollection->clear(); }
-    virtual void flush_data(LCEvent* evt) { evt->addCollection(trackCollection.get(), _outputTrackCollection); }
-
     virtual EVENT::Track* convert_track(const TrackResult& fitter_res);
     virtual EVENT::TrackState* convert_state(int location, const Acts::BoundVector& value,
                                              const Acts::BoundMatrix& cov, Acts::Vector3 mag_pos);
@@ -111,8 +107,6 @@ private:
     void buildDetector();
 
     void buildBfield();
-
-    std::shared_ptr<LCCollectionVec> trackCollection;
 
     std::shared_ptr<GeometryIdMappingTool> _geoIDMappingTool;
 

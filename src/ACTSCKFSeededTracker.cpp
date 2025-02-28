@@ -201,7 +201,7 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
         const MarlinACTS::SourceLink& s_link = meas.sourceLink().get<MarlinACTS::SourceLink>();
         if (!_seedGeometrySelection.check(s_link.geometryId()))
         {
-            std::cout << "Check failure for geometry ID " << s_link.geometryId() << std::endl;
+            streamlog_out(DEBUG) << "Check failure for geometry ID " << s_link.geometryId() << std::endl;
             continue;
         }
 
@@ -320,8 +320,8 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
             const Acts::Surface* surface = trackingGeometry()->findSurface(geoId);
             if (surface == nullptr)
             {
-                std::cout << "surface with geoID " << geoId
-                          << " is not found in the tracking geometry";
+                streamlog_out(ERROR) << "surface with geoID " << geoId
+                                     << " is not found in the tracking geometry";
                 continue;
             }
 
@@ -333,7 +333,7 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
                                                 *surface, seedField, 0.1 * Acts::UnitConstants::T);
             if (!optParams.has_value())
             {
-                std::cout << "Failed estimation of track parameters for seed." << std::endl;
+                streamlog_out(ERROR) << "Failed estimation of track parameters for seed." << std::endl;
                 continue;
             }
 
