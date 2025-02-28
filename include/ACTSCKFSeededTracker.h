@@ -19,6 +19,8 @@ public:
 
     virtual void init() override;
 
+    virtual void processEvent(LCEvent* evt) override;
+
 protected:
     virtual SeedParamList getSeeds(const MarlinACTS::MeasurementContainer& m_list,
                                    LCEvent* evt) override;
@@ -39,6 +41,8 @@ private:
     float _seedFinding_impactMax;
     float _seedFinding_cotThetaMax;
 
+    std::string _outputSeedCollection;
+
     int _zTopBinLen;
     int _zBottomBinLen;
     int _phiTopBinLen;
@@ -55,6 +59,8 @@ private:
     Acts::CylindricalSpacePointGridConfig gridCfg;
 
     MarlinACTS::GeometryIdSelector _seedGeometrySelection;
+
+    LCCollectionVec* seedCollection;
 };
 
 #endif //ACTSCKFSEEDEDTRACKER_H

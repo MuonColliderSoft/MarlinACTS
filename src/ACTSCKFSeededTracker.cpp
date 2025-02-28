@@ -4,6 +4,8 @@
 #include <Acts/Definitions/Units.hpp>
 #include <Acts/Seeding/EstimateTrackParamsFromSeed.hpp>
 
+#include <IMPL/TrackImpl.h>
+
 using SSPoint = MarlinACTS::SeedSpacePoint;
 using SSPointGrid = Acts::CylindricalSpacePointGrid<SSPoint>;
 
@@ -78,6 +80,9 @@ ACTSCKFSeededTracker::ACTSCKFSeededTracker() :
                                "Layers to use for seeding in format \"VolID LayID\", one per line. ID's "
                                "are ACTS GeometryID's. * can be used to wildcard.",
                                _seedingLayers, {"*", "*"});
+
+    registerOutputCollection(LCIO::TRACK, "SeedCollectionName", "Name of seed output collection.",
+                             _outputSeedCollection, std::string("SeedTracks"));
 
 }
 
@@ -183,7 +188,7 @@ void ACTSCKFSeededTracker::init()
     gridCfg.impactMax = finderCfg.impactMax;
 
     gridCfg.zBinEdges.resize(_zBinEdges.size());
-    for (int k = 0; k < _zBinEdges.size(); k++) gridCfg.zBinEdges[k] = _zBinEdges[k];
+    for (long unsigned int k = 0; k < _zBinEdges.size(); k++) gridCfg.zBinEdges[k] = _zBinEdges[k];
 
 }
 
@@ -353,8 +358,38 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
             Acts::BoundTrackParameters paramseed(surface->getSharedPtr(), params,
                                                  cov, Acts::ParticleHypothesis::pion());
             paramseeds.push_back(paramseed);
+
+            /* ******************************************************************************
+             * Seed track for collection
+             * *************************************************************************** */
+            IMPL::TrackImpl *seedtrack = new IMPL::TrackImpl;
+
+            Acts::Vector3 globalPos = surface->localToGlobal(geometryContext(),
+                    { params[Acts::eBoundLoc0], params[Acts::eBoundLoc1] }, { 0, 0, 0 });
+
+            EVENT::TrackState *seedTrackState = convert_state(lcio::TrackState::AtFirstHit,
+                    paramseed.parameters(), paramseed.covariance().value(), globalPos);
+
+            for (const MarlinACTS::SeedSpacePoint *sp : seed.sp())
+            {
+              const MarlinACTS::SourceLink& srcLink = sp->sourceLink();
+              seedtrack->addHit(srcLink.lciohit());
+            }
+
+            seedtrack->trackStates().push_back(seedTrackState);
+            seedCollection->addElement(seedtrack);
         }
     }
 
     return paramseeds;
 }
+
+void ACTSCKFSeededTracker::processEvent(LCEvent* evt)
+{
+    seedCollection = new LCCollectionVec(LCIO::TRACK);
+
+    ACTSCKFBaseTracker::processEvent(evt);
+
+    evt->addCollection(seedCollection, _outputSeedCollection);
+}
+
