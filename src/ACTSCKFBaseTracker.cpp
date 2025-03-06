@@ -7,8 +7,11 @@
 #include <IMPL/LCFlagImpl.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 
+#include "CollectionHandler.h"
 #include "Measurement.h"
 #include "MeasurementCalibrator.h"
+
+#include <cmath>
 
 ACTSCKFBaseTracker::ACTSCKFBaseTracker(const string& procname) :
     ACTSBaseTracker(procname)
@@ -38,6 +41,9 @@ ACTSCKFBaseTracker::ACTSCKFBaseTracker(const string& procname) :
 
     registerProcessorParameter("InitialTrackError_Time ", "Track error estimate, time (ns).",
                                _initialTrackError_z0, 1 * Acts::UnitConstants::ns);
+
+    registerProcessorParameter("ThetaTolerance", "Tolerance for theta in rad.",
+                               theta_tolerance, 0.01f * static_cast<float>(M_PI));
 }
 
 void ACTSCKFBaseTracker::init()
@@ -162,10 +168,7 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
      *  Track finding
      ******************************************************************************************* */
 
-    LCCollectionVec* trackCollection = new LCCollectionVec(LCIO::TRACK);
-    LCFlagImpl trkFlag(0);
-    trkFlag.setBit(LCIO::TRBIT_HITS);
-    trackCollection->setFlag(trkFlag.getFlag());
+    MarlinACTS::CollectionHandler coll_handler { _outputTrackCollection, true, theta_tolerance };
 
     auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
     auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
@@ -209,9 +212,9 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
                 continue;
             }
 
-            trackCollection->addElement(convert_track(trackTip));
+            coll_handler.addTrack(convert_track(trackTip));
         }
     }
 
-    evt->addCollection(trackCollection, _outputTrackCollection);
+    coll_handler.saveCollection(evt);
 }

@@ -51,6 +51,7 @@ ADD_LIBRARY(MarlinACTS SHARED src/ACTSBaseTracker.cpp
                               src/ACTSCKFBaseTracker.cpp
                               src/ACTSCKFSeededTracker.cpp
                               src/ACTSCKFTruthTracker.cpp
+                              src/CollectionHandler.cpp
                               src/GeometryIdMappingTool.cpp
                               src/GeometryIdSelector.cpp
                               src/Helpers.cpp)

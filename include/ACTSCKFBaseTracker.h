@@ -49,6 +49,8 @@ protected:
     double _initialTrackError_z0;
     double _initialTrackError_time;
 
+    float theta_tolerance;
+
     CKFPtr trackFinder;
 };
 
