@@ -174,8 +174,7 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
     auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
     TrackContainer tracks(trackContainer, trackStateContainer);
 
-    Propagator::template Options<Acts::ActionList<Acts::MaterialInteractor>,
-                           Acts::AbortList<Acts::EndOfWorldReached>>
+    Propagator::template Options<Acts::ActorList<Acts::MaterialInteractor, Acts::EndOfWorldReached>>
         extrapolationOptions(geometryContext(), magneticFieldContext());
 
     for (std::size_t iseed = 0; iseed < seeds.size(); ++iseed)

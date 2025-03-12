@@ -6,7 +6,6 @@
 #include "Acts/EventData/detail/CalculateResiduals.hpp"
 #include "Acts/EventData/detail/ParameterTraits.hpp"
 #include "Acts/EventData/detail/PrintParameters.hpp"
-#include "Acts/Utilities/detail/Subspace.hpp"
 #include "Acts/EventData/Types.hpp"
 
 #include <array>

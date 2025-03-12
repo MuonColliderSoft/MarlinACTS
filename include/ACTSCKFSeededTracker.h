@@ -3,6 +3,7 @@
 
 #include "ACTSCKFBaseTracker.h"
 #include "SeedSpacePoint.h"
+#include "SpacePointContainer.h"
 #include "GeometryIdSelector.h"
 
 #include <Acts/Seeding/SeedFinder.hpp>
@@ -22,6 +23,11 @@ public:
     virtual void processEvent(LCEvent* evt) override;
 
 protected:
+    using SSPoint = typename Acts::SpacePointContainer<
+            MarlinACTS::SpacePointContainer<std::vector<const MarlinACTS::SeedSpacePoint*>>,
+            Acts::detail::RefHolder>::SpacePointProxyType;
+    using SSPointGrid = Acts::CylindricalSpacePointGrid<SSPoint>;
+
     virtual SeedParamList getSeeds(const MarlinACTS::MeasurementContainer& m_list,
                                    LCEvent* evt) override;
 
@@ -55,7 +61,7 @@ private:
 
     std::vector<std::string> _seedingLayers;
 
-    Acts::SeedFinderConfig<MarlinACTS::SeedSpacePoint> finderCfg;
+    Acts::SeedFinderConfig<SSPoint> finderCfg;
     Acts::CylindricalSpacePointGridConfig gridCfg;
 
     MarlinACTS::GeometryIdSelector _seedGeometrySelection;

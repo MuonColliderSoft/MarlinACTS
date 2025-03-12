@@ -6,9 +6,6 @@
 
 #include <IMPL/TrackImpl.h>
 
-using SSPoint = MarlinACTS::SeedSpacePoint;
-using SSPointGrid = Acts::CylindricalSpacePointGrid<SSPoint>;
-
 ACTSCKFSeededTracker aACTSCKFSeededTracker;
 
 ACTSCKFSeededTracker::ACTSCKFSeededTracker() :
@@ -175,8 +172,7 @@ void ACTSCKFSeededTracker::init()
     Acts::SeedFilterConfig filterCfg;
     filterCfg.maxSeedsPerSpM = finderCfg.maxSeedsPerSpM;
 
-    finderCfg.seedFilter = std::make_unique<Acts::SeedFilter<MarlinACTS::SeedSpacePoint>>(
-        Acts::SeedFilter<MarlinACTS::SeedSpacePoint>(filterCfg.toInternalUnits()));
+    finderCfg.seedFilter = std::make_unique<Acts::SeedFilter<SSPoint>>(filterCfg.toInternalUnits());
     finderCfg = finderCfg.toInternalUnits().calculateDerivedQuantities();
 
     gridCfg.cotThetaMax = finderCfg.cotThetaMax;
@@ -265,44 +261,54 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
     Acts::CylindricalSpacePointGridOptions gridOpts;
     gridOpts.bFieldInZ = B_zero;
 
-    auto extractGlobalQuantities = [](const SSPoint& sp, float, float, float) {
-        Acts::Vector3 position { sp.x(), sp.y(), sp.z() };
-        Acts::Vector2 covariance { sp.varianceR(), sp.varianceZ() };
-        return std::make_tuple(position, covariance, sp.t());
-    };
-
     std::vector<const MarlinACTS::SeedSpacePoint *> spacePointPtrs(
         spacePoints.size(), nullptr);
     std::transform(spacePoints.begin(), spacePoints.end(), spacePointPtrs.begin(),
                  [](const MarlinACTS::SeedSpacePoint &sp) { return &sp; });
 
-    Acts::Extent rRangeSPExtent;
+    Acts::SpacePointContainerConfig spConfig;
+    spConfig.useDetailedDoubleMeasurementInfo = finderCfg.useDetailedDoubleMeasurementInfo;
+
+    Acts::SpacePointContainerOptions spOptions;
+    spOptions.beamPos = { 0., 0. };
+
+    MarlinACTS::SpacePointContainer container(spacePointPtrs);
+    Acts::SpacePointContainer<decltype(container), Acts::detail::RefHolder>
+        spContainer(spConfig, spOptions, container);
 
     SSPointGrid grid = Acts::CylindricalSpacePointGridCreator::createGrid<SSPoint>(
-        gridCfg.toInternalUnits(), gridOpts.toInternalUnits());
+            gridCfg.toInternalUnits(), gridOpts.toInternalUnits());
 
-    Acts::CylindricalSpacePointGridCreator::fillGrid(finderCfg, finderOpts, grid,
-        spacePointPtrs.begin(), spacePointPtrs.end(), extractGlobalQuantities,
-        rRangeSPExtent);
+    Acts::CylindricalSpacePointGridCreator::fillGrid<SSPoint>(finderCfg, finderOpts,
+            grid, spContainer);
 
-    const Acts::GridBinFinder<2ul> bottomBinFinder(_phiBottomBinLen, _ZBottomBinSchema);
-    const Acts::GridBinFinder<2ul> topBinFinder(_phiTopBinLen, _ZTopBinSchema);
+    float minRange = std::numeric_limits<float>::max();
+    float maxRange = std::numeric_limits<float>::lowest();
+    for (const auto& coll : grid)
+    {
+        if (coll.empty()) continue;
+
+        const auto* firstEl = coll.front();
+        const auto* lastEl = coll.back();
+        minRange = std::min(firstEl->radius(), minRange);
+        maxRange = std::max(lastEl->radius(), maxRange);
+    }
+
+    // TODO verify the radius parameter to 0
+    const Acts::GridBinFinder<3ul> bottomBinFinder(_phiBottomBinLen, _ZBottomBinSchema, 0);
+    const Acts::GridBinFinder<3ul> topBinFinder(_phiTopBinLen, _ZTopBinSchema, 0);
 
     auto spacePointsGrouping = Acts::CylindricalBinnedGroup<SSPoint>(std::move(grid),
         bottomBinFinder, topBinFinder);
 
     Acts::SeedFinder<SSPoint, SSPointGrid> finder(finderCfg);
     decltype(finder)::SeedingState state;
+    state.spacePointMutableData.resize(spContainer.size());
 
-    state.spacePointData.resize(spacePointPtrs.size(),
-        finderCfg.useDetailedDoubleMeasurementInfo);
-
-    float up = Acts::clampValue<float>(
-      std::floor(rRangeSPExtent.max(Acts::BinningValue::binR) / 2) * 2);
     const Acts::Range1D<float> rMiddleSPRange(
-      std::floor(rRangeSPExtent.min(Acts::BinningValue::binR) / 2) * 2 +
-          finderCfg.deltaRMiddleMinSPRange,
-      up - finderCfg.deltaRMiddleMaxSPRange);
+            std::floor(minRange / 2) * 2 + finderCfg.deltaRMiddleMinSPRange,
+            std::floor(maxRange / 2) * 2 - finderCfg.deltaRMiddleMaxSPRange);
+
 
     /* ********************************************************************************************
      *  Seeding
@@ -316,9 +322,18 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
         finder.createSeedsForGroup(finderOpts, state, spacePointsGrouping.grid(),
                                    seeds, bottom, middle, top, rMiddleSPRange);
 
+        std::vector<Acts::Seed<MarlinACTS::SeedSpacePoint>> f_seeds;
         for (const Acts::Seed<SSPoint> &seed : seeds)
         {
-            const SSPoint* bottomSP = seed.sp().front();
+            const auto& sps = seed.sp();
+            f_seeds.emplace_back(*sps[0]->externalSpacePoint(),
+                    *sps[1]->externalSpacePoint(),
+                    *sps[2]->externalSpacePoint());
+        }
+
+        for (const auto &seed : f_seeds)
+        {
+            const MarlinACTS::SeedSpacePoint* bottomSP = seed.sp().front();
 
             const auto& sourceLink = bottomSP->sourceLink();
             const Acts::GeometryIdentifier& geoId = sourceLink.geometryId();

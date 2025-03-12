@@ -482,8 +482,7 @@ EVENT::Track* ACTSBaseTracker::convert_track(const TrackResult& fitter_res)
                                            phi, theta, params[Acts::eBoundQOverP],
                                            covariance, Acts::ParticleHypothesis::pion());
 
-    Propagator::template Options<Acts::ActionList<Acts::MaterialInteractor>,
-                                 Acts::AbortList<Acts::EndOfWorldReached>>
+    Propagator::template Options<Acts::ActorList<Acts::MaterialInteractor, Acts::EndOfWorldReached>>
 	    caloPropOptions(geometryContext(), magneticFieldContext());
     caloPropOptions.pathLimit = 20 * Acts::UnitConstants::m;               // TODO missing conf. parameter
 
