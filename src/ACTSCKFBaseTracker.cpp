@@ -216,5 +216,7 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
         }
     }
 
+    coll_handler.process();
+
     coll_handler.saveCollection(evt);
 }
