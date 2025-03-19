@@ -150,6 +150,11 @@ void ACTSCKFSeededTracker::init()
         }
     }
 
+    // TODO workaround for grid axis termination
+    _zBinEdges.push_back(_seedFinding_zMax);
+    _ZTopBinSchema.emplace_back(0, 0);
+    _ZBottomBinSchema.emplace_back(0, 0);
+
     finderCfg.rMax = _seedFinding_rMax;
     finderCfg.deltaRMin = _seedFinding_deltaRMin;
     finderCfg.deltaRMax = _seedFinding_deltaRMax;
@@ -168,6 +173,8 @@ void ACTSCKFSeededTracker::init()
     finderCfg.minPt = _seedFinding_minPt * Acts::UnitConstants::MeV;
     finderCfg.impactMax = _seedFinding_impactMax * Acts::UnitConstants::mm;
     finderCfg.useVariableMiddleSPRange = true;
+
+    finderCfg.spacePointSelector.connect<PassThroughSPselect>();
 
     Acts::SeedFilterConfig filterCfg;
     filterCfg.maxSeedsPerSpM = finderCfg.maxSeedsPerSpM;
@@ -294,7 +301,6 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
         maxRange = std::max(lastEl->radius(), maxRange);
     }
 
-    // TODO verify the radius parameter to 0
     const Acts::GridBinFinder<3ul> bottomBinFinder(_phiBottomBinLen, _ZBottomBinSchema, 0);
     const Acts::GridBinFinder<3ul> topBinFinder(_phiTopBinLen, _ZTopBinSchema, 0);
 

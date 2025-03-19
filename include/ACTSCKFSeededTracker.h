@@ -67,6 +67,9 @@ private:
     MarlinACTS::GeometryIdSelector _seedGeometrySelection;
 
     LCCollectionVec* seedCollection;
+
+    // For future implementations
+    static inline bool PassThroughSPselect(const SSPoint& sp) { return true; }
 };
 
 #endif //ACTSCKFSEEDEDTRACKER_H
