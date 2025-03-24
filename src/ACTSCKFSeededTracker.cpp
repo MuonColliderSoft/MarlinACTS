@@ -354,16 +354,15 @@ ACTSCKFSeededTracker::getSeeds(const MarlinACTS::MeasurementContainer& m_list, L
             const Acts::Vector3 seedPos(bottomSP->x(), bottomSP->y(), bottomSP->z());
             Acts::Vector3 seedField = magneticFieldValue(seedPos);
 
-            std::optional<Acts::BoundVector> optParams =
-              Acts::estimateTrackParamsFromSeed(geometryContext(), seed.sp().begin(), seed.sp().end(),
-                                                *surface, seedField, 0.1 * Acts::UnitConstants::T);
-            if (!optParams.has_value())
+            Acts::Result<Acts::BoundVector> paramsResult =
+              Acts::estimateTrackParamsFromSeed(geometryContext(), seed.sp(), *surface, seedField);
+            if (!paramsResult.ok())
             {
                 streamlog_out(ERROR) << "Failed estimation of track parameters for seed." << std::endl;
                 continue;
             }
 
-            const Acts::BoundVector &params = optParams.value();
+            const auto& params = *paramsResult;
 
             //float charge = std::copysign(1, params[Acts::eBoundQOverP]);
             float p = std::abs(1 / params[Acts::eBoundQOverP]);

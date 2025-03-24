@@ -3,7 +3,6 @@
 
 #include "Acts/Definitions/TrackParametrization.hpp"
 #include "Acts/EventData/SourceLink.hpp"
-#include "Acts/EventData/detail/CalculateResiduals.hpp"
 #include "Acts/EventData/detail/ParameterTraits.hpp"
 #include "Acts/EventData/detail/PrintParameters.hpp"
 #include "Acts/EventData/Types.hpp"
@@ -19,7 +18,7 @@ class VariableSizeMeasurement
 public:
     static constexpr std::size_t kFullSize = Acts::detail::kParametersSize<indices_t>;
 
-    using Scalar = Acts::ActsScalar;
+    using Scalar = double;
 
     using SubspaceIndex = std::uint8_t;
     using SubspaceIndices =

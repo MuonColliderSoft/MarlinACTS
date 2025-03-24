@@ -48,7 +48,7 @@ public:
               measurement.parameters<kMeasurementSize>();
             trackState.calibratedCovariance<kMeasurementSize>() =
               measurement.covariance<kMeasurementSize>();
-            trackState.setSubspaceIndices(
+            trackState.setProjectorSubspaceIndices(
               measurement.subspaceIndices<kMeasurementSize>());
         });
     }
