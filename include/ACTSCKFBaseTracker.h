@@ -29,8 +29,7 @@ protected:
     using TrackContainer = Acts::TrackContainer<Acts::VectorTrackContainer,
                                                 Acts::VectorMultiTrajectory,
 											    std::shared_ptr>;
-    using TrackFinderOptions = Acts::CombinatorialKalmanFilterOptions<
-        MarlinACTS::SourceLinkAccessor::Iterator, TrackContainer>;
+    using TrackFinderOptions = Acts::CombinatorialKalmanFilterOptions<TrackContainer>;
 
     using CKF = Acts::CombinatorialKalmanFilter<Propagator, TrackContainer>;
     using CKFPtr = std::shared_ptr<CKF>;

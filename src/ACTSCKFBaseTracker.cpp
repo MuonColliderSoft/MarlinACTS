@@ -2,6 +2,7 @@
 
 #include <Acts/Definitions/Units.hpp>
 #include <Acts/TrackFinding/MeasurementSelector.hpp>
+#include "Acts/TrackFinding/TrackStateCreator.hpp"
 
 #include <IMPL/TrackImpl.h>
 #include <IMPL/LCFlagImpl.h>
@@ -135,9 +136,6 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
     MarlinACTS::SourceLinkAccessor slAccessor;
     slAccessor.container = &sourceLinks;
 
-    Acts::SourceLinkAccessorDelegate<MarlinACTS::SourceLinkAccessor::Iterator> slAccessorDelegate;
-    slAccessorDelegate.connect<&MarlinACTS::SourceLinkAccessor::range>(&slAccessor);
-
     /* ********************************************************************************************
      *  Seed setup
      ******************************************************************************************* */
@@ -153,16 +151,24 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
 
     Acts::GainMatrixUpdater kfUpdater;
 
+    using TrackStateCreatorType = Acts::TrackStateCreator<MarlinACTS::SourceLinkAccessor::Iterator,
+            TrackContainer>;
+    TrackStateCreatorType trackStateCreator;
+    trackStateCreator.sourceLinkAccessor
+        .template connect<&MarlinACTS::SourceLinkAccessor::range>(&slAccessor);
+    trackStateCreator.calibrator
+        .template connect<&MarlinACTS::MeasurementCalibrator::calibrate>(&measCal);
+    trackStateCreator.measurementSelector
+        .template connect<&Acts::MeasurementSelector::select<Acts::VectorMultiTrajectory>>(&measSel);
+
     Acts::CombinatorialKalmanFilterExtensions<TrackContainer> extensions;
-    extensions.calibrator.connect<&MarlinACTS::MeasurementCalibrator::calibrate>(&measCal);
     extensions.updater.connect<
         &Acts::GainMatrixUpdater::operator()<Acts::VectorMultiTrajectory>>(&kfUpdater);
-    extensions.measurementSelector.connect<
-        &Acts::MeasurementSelector::select<Acts::VectorMultiTrajectory>>(&measSel);
-
+    extensions.createTrackStates
+          .template connect<&TrackStateCreatorType::createTrackStates>( &trackStateCreator);
 
     TrackFinderOptions ckfOptions = TrackFinderOptions(geometryContext(), magneticFieldContext(),
-        calibrationContext(), slAccessorDelegate, extensions, pOptions);
+        calibrationContext(), extensions, pOptions);
 
     /* ********************************************************************************************
      *  Track finding

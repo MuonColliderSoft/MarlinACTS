@@ -225,12 +225,12 @@ void ACTSBaseTracker::buildDetector()
         layerBuilderConfig.autoSurfaceBinning = true;
 
         // AutoBinning
-        std::vector<std::pair<double, double>> binTolerances { Acts::numBinningValues(), { 0., 0. } };
-        binTolerances[static_cast<int>(Acts::BinningValue::binR)] = 
+        std::vector<std::pair<double, double>> binTolerances { Acts::numAxisDirections(), { 0., 0. } };
+        binTolerances[toUnderlying(Acts::AxisDirection::AxisR)] =
             range_from_json(volume["geo-tgeo-sfbin-r-tolerance"]);
-        binTolerances[static_cast<int>(Acts::BinningValue::binZ)] =
+        binTolerances[toUnderlying(Acts::AxisDirection::AxisZ)] =
             range_from_json(volume["geo-tgeo-sfbin-z-tolerance"]);
-        binTolerances[static_cast<int>(Acts::BinningValue::binPhi)] =
+        binTolerances[toUnderlying(Acts::AxisDirection::AxisPhi)] =
             range_from_json(volume["geo-tgeo-sfbin-phi-tolerance"]);
         layerBuilderConfig.surfaceBinMatcher = Acts::SurfaceBinningMatcher(binTolerances);
 
@@ -250,23 +250,23 @@ void ACTSBaseTracker::buildDetector()
                                                          0.1 * Acts::UnitConstants::mm);
 
             // Fill the parsing restrictions in r
-            lConfig.parseRanges.push_back({Acts::BinningValue::binR,
+            lConfig.parseRanges.push_back({Acts::AxisDirection::AxisR,
                 range_from_json(volume["geo-tgeo-layer-r-ranges"][subvolumeName])});
 
             // Fill the parsing restrictions in z
-            lConfig.parseRanges.push_back({Acts::BinningValue::binZ,
+            lConfig.parseRanges.push_back({Acts::AxisDirection::AxisZ,
                 range_from_json(volume["geo-tgeo-layer-z-ranges"][subvolumeName])});
 
             // Fill the layer splitting parameters in z
             float rsplit = volume["geo-tgeo-layer-r-split"][subvolumeName];
             if(rsplit > 0) {
-            lConfig.splitConfigs.push_back({Acts::BinningValue::binR, rsplit});
+            lConfig.splitConfigs.push_back({Acts::AxisDirection::AxisR, rsplit});
             }
 
             // Fill the layer splitting parameters in z
             float zsplit = volume["geo-tgeo-layer-z-split"][subvolumeName];
             if(zsplit > 0) {
-            lConfig.splitConfigs.push_back({Acts::BinningValue::binZ, zsplit});
+            lConfig.splitConfigs.push_back({Acts::AxisDirection::AxisZ, zsplit});
             }
 
             layerBuilderConfig.layerConfigurations[idx].push_back(lConfig);
@@ -329,7 +329,7 @@ void ACTSBaseTracker::buildDetector()
             -> void {
           for (const auto& lcfg : lConfigs) {
             for (const auto& scfg : lcfg.splitConfigs) {
-              if (scfg.first == Acts::BinningValue::binR and scfg.second > 0.) {
+              if (scfg.first == Acts::AxisDirection::AxisR and scfg.second > 0.) {
                 volumeConfig.ringTolerance =
                     std::max(volumeConfig.ringTolerance, scfg.second);
                 volumeConfig.checkRingLayout = true;
