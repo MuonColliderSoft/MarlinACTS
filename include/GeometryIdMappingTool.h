@@ -6,6 +6,8 @@
 
 #include <UTIL/CellIDDecoder.h>
 
+#include <Acts/Geometry/GeometryIdentifier.hpp>
+
 #include <unordered_map>
 
 namespace MarlinACTS {
@@ -21,11 +23,11 @@ public:
     GeometryIdMappingTool(const std::string& encoderString,
                           DetSchema dType = DetSchema::MuColl_v1);
 
-    uint64_t getGeometryID(const lcio::SimTrackerHit* hit);
-    uint64_t getGeometryID(const lcio::TrackerHit* hit);
+    Acts::GeometryIdentifier getGeometryID(const lcio::SimTrackerHit* hit);
+    Acts::GeometryIdentifier getGeometryID(const lcio::TrackerHit* hit);
 
-    uint64_t getGeometryID(uint32_t systemID, uint32_t layerID, int32_t sideID,
-                           uint32_t ladderID, uint32_t moduleID);
+    Acts::GeometryIdentifier getGeometryID(uint32_t systemID, uint32_t layerID,
+            int32_t sideID, uint32_t ladderID, uint32_t moduleID);
 
 private:
     std::string _encoderString;

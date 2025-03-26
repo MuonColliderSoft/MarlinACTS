@@ -116,7 +116,7 @@ GeometryIdMappingTool::GeometryIdMappingTool(const std::string& encoderString,
       det_type(dType)
 {}
 
-uint64_t GeometryIdMappingTool::getGeometryID(const lcio::SimTrackerHit* hit)
+Acts::GeometryIdentifier GeometryIdMappingTool::getGeometryID(const lcio::SimTrackerHit* hit)
 {
     UTIL::CellIDDecoder<lcio::SimTrackerHit> decoder(_encoderString);
     uint32_t systemID = decoder(hit)["system"];
@@ -128,7 +128,7 @@ uint64_t GeometryIdMappingTool::getGeometryID(const lcio::SimTrackerHit* hit)
     return getGeometryID(systemID, layerID, sideID, ladderID, moduleID);
 }
 
-uint64_t GeometryIdMappingTool::getGeometryID(const lcio::TrackerHit* hit)
+Acts::GeometryIdentifier GeometryIdMappingTool::getGeometryID(const lcio::TrackerHit* hit)
 {
     UTIL::CellIDDecoder<lcio::TrackerHit> decoder(_encoderString);
     uint32_t systemID = decoder(hit)["system"];
@@ -140,10 +140,8 @@ uint64_t GeometryIdMappingTool::getGeometryID(const lcio::TrackerHit* hit)
     return getGeometryID(systemID, layerID, sideID, ladderID, moduleID);
 }
 
-uint64_t GeometryIdMappingTool::getGeometryID(uint32_t systemID,
-                                              uint32_t layerID, int32_t sideID,
-                                              uint32_t ladderID,
-                                              uint32_t moduleID)
+Acts::GeometryIdentifier GeometryIdMappingTool::getGeometryID(uint32_t systemID,
+        uint32_t layerID, int32_t sideID, uint32_t ladderID, uint32_t moduleID)
 {
     uint64_t geometry_id = 0;
 
@@ -326,5 +324,5 @@ uint64_t GeometryIdMappingTool::getGeometryID(uint32_t systemID,
     }
     geometry_id |= sensitive_id << (2 * 4);
 
-    return geometry_id;
+    return Acts::GeometryIdentifier { geometry_id };
 }

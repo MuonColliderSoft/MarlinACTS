@@ -64,7 +64,7 @@ ACTSBaseTracker::ACTSBaseTracker(const string& procname) :
 
 const Acts::Surface* ACTSBaseTracker::findSurface(const EVENT::TrackerHit* hit) const
 {
-    uint64_t moduleGeoId = _geoIDMappingTool->getGeometryID(hit);
+    Acts::GeometryIdentifier moduleGeoId = _geoIDMappingTool->getGeometryID(hit);
     return _trackingGeometry->findSurface(moduleGeoId);
 }
 
@@ -478,9 +478,10 @@ EVENT::Track* ACTSBaseTracker::convert_track(const TrackResult& fitter_res)
     double theta = params[Acts::eBoundTheta];
     Acts::Vector3 pos(d0 * cos(phi), d0 * sin(phi), z0);
 
-    Acts::CurvilinearTrackParameters start(Acts::VectorHelpers::makeVector4(pos, params[Acts::eBoundTime]),
-                                           phi, theta, params[Acts::eBoundQOverP],
-                                           covariance, Acts::ParticleHypothesis::pion());
+    using CurvilinearTrackParameters = Acts::GenericBoundTrackParameters<Acts::ParticleHypothesis>;
+    auto start = CurvilinearTrackParameters::createCurvilinear(
+            Acts::VectorHelpers::makeVector4(pos, params[Acts::eBoundTime]), phi, theta,
+            params[Acts::eBoundQOverP], covariance, Acts::ParticleHypothesis::pion());
 
     Propagator::template Options<Acts::ActorList<Acts::MaterialInteractor, Acts::EndOfWorldReached>>
 	    caloPropOptions(geometryContext(), magneticFieldContext());
