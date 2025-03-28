@@ -43,6 +43,9 @@ FIND_PACKAGE( Acts REQUIRED COMPONENTS Core PluginJson PluginTGeo PluginDD4hep )
 
 INCLUDE(GNUInstallDirs)
 
+### DATA ###########################################################
+ADD_SUBDIRECTORY(data)
+
 ### LIBRARY #################################################################
 ADD_DEFINITIONS( "-Wno-long-long -Wno-effc++ -Wno-unused-parameter -Wno-narrowing" )
 
