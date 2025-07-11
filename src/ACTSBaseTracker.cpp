@@ -21,8 +21,8 @@
 #include <Acts/MagneticField/ConstantBField.hpp>
 #include <Acts/Plugins/DD4hep/DD4hepFieldAdapter.hpp>
 #include <Acts/Plugins/Json/JsonMaterialDecorator.hpp>
-#include <Acts/Plugins/TGeo/TGeoDetectorElement.hpp>
-#include <Acts/Plugins/TGeo/TGeoLayerBuilder.hpp>
+#include <Acts/Plugins/Root/TGeoDetectorElement.hpp>
+#include <Acts/Plugins/Root/TGeoLayerBuilder.hpp>
 #include "Acts/Propagator/MaterialInteractor.hpp"
 #include <Acts/Utilities/BinningType.hpp>
 

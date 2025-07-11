@@ -5,7 +5,7 @@
 #include <Acts/Geometry/TrackingGeometry.hpp>
 #include <Acts/MagneticField/MagneticFieldContext.hpp>
 #include <Acts/MagneticField/MagneticFieldProvider.hpp>
-#include <Acts/Plugins/TGeo/TGeoDetectorElement.hpp>
+#include <Acts/Plugins/Root/TGeoDetectorElement.hpp>
 #include <Acts/Utilities/CalibrationContext.hpp>
 #include <Acts/Propagator/EigenStepper.hpp>
 #include <Acts/Propagator/Navigator.hpp>

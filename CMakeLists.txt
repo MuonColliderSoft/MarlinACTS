@@ -39,7 +39,7 @@ FIND_PACKAGE( ROOT REQUIRED)
 INCLUDE_DIRECTORIES( ${ROOT_INCLUDE_DIRS} )
 LINK_LIBRARIES( ${ROOT_LIBRARIES} )
 
-FIND_PACKAGE( Acts REQUIRED COMPONENTS Core PluginJson PluginTGeo PluginDD4hep )
+FIND_PACKAGE( Acts REQUIRED COMPONENTS Core PluginJson PluginRoot PluginDD4hep )
 
 INCLUDE(GNUInstallDirs)
 
@@ -70,7 +70,7 @@ TARGET_INCLUDE_DIRECTORIES(MarlinACTS PRIVATE
 TARGET_LINK_LIBRARIES(MarlinACTS ${ROOT_LIBRARIES}
                                  DD4hep::DDCore
                                  ActsCore
-                                 ActsPluginTGeo
+                                 ActsPluginRoot
                                  ActsPluginJson
                                  ActsPluginDD4hep)
 
