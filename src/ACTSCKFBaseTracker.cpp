@@ -28,20 +28,20 @@ ACTSCKFBaseTracker::ACTSCKFBaseTracker(const string& procname) :
                                "Track error estimate, momentum component (relative).",
                                _initialTrackError_relP, 0.25);
 
-    registerProcessorParameter("InitialTrackError_Phi", "Track error estimate, phi (radians).",
-                               _initialTrackError_phi, 1 * Acts::UnitConstants::degree);
+    registerProcessorParameter("InitialTrackError_Phi", "Track error estimate, phi (degree).",
+                               _initialTrackError_phi, 1.0);
 
-    registerProcessorParameter("InitialTrackError_Lambda", "Track error estimate, lambda (radians).",
-                             _initialTrackError_lambda, 1 * Acts::UnitConstants::degree);
+    registerProcessorParameter("InitialTrackError_Lambda", "Track error estimate, lambda (degree).",
+                             _initialTrackError_lambda, 1.0);
 
     registerProcessorParameter("InitialTrackError_D0", "Track error estimate, local position for D0 (mm).",
-                               _initialTrackError_d0, 10 * Acts::UnitConstants::um);
+                               _initialTrackError_d0, 0.01);
 
     registerProcessorParameter("InitialTrackError_Z0", "Track error estimate, local position for Z0 (mm).",
-                               _initialTrackError_z0, 10 * Acts::UnitConstants::um);
+                               _initialTrackError_z0, 0.01);
 
     registerProcessorParameter("InitialTrackError_Time ", "Track error estimate, time (ns).",
-                               _initialTrackError_z0, 1 * Acts::UnitConstants::ns);
+                               _initialTrackError_time, 1.0);
 
     registerProcessorParameter("ThetaTolerance", "Tolerance for theta in rad.",
                                theta_tolerance, 0.01f * static_cast<float>(M_PI));
@@ -50,6 +50,12 @@ ACTSCKFBaseTracker::ACTSCKFBaseTracker(const string& procname) :
 void ACTSCKFBaseTracker::init()
 {
     ACTSBaseTracker::init();
+
+    _initialTrackError_phi *= Acts::UnitConstants::degree;
+    _initialTrackError_lambda *= Acts::UnitConstants::degree;
+    _initialTrackError_d0 *= Acts::UnitConstants::mm;
+    _initialTrackError_z0 *= Acts::UnitConstants::mm;
+    _initialTrackError_time *= Acts::UnitConstants::ns;
 
     trackFinder.reset(new CKF(*propagator));
 }

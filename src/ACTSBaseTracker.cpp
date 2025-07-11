@@ -75,6 +75,9 @@ const Acts::Surface* ACTSBaseTracker::findSurface(const EVENT::TrackerHit* hit) 
  * ******************************************************************************************** */
 void ACTSBaseTracker::init()
 {
+    _caloFaceR *= Acts::UnitConstants::mm;
+    _caloFaceR *= Acts::UnitConstants::mm;
+
     _matFile = MarlinACTS::findFile(_matFile);
     _tgeoFile = MarlinACTS::findFile(_tgeoFile);
     _tgeodescFile = MarlinACTS::findFile(_tgeodescFile);
