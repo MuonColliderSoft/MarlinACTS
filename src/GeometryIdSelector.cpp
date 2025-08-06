@@ -1,5 +1,7 @@
 #include "GeometryIdSelector.h"
 
+#include <algorithm>
+
 using namespace MarlinACTS;
 
 GeometryIdSelector::GeometryIdSelector(const std::vector<Acts::GeometryIdentifier>& selection)
