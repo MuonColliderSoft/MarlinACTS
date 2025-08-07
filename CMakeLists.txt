@@ -8,7 +8,7 @@ PROJECT( MarlinACTS )
 # project version
 SET( ${PROJECT_NAME}_VERSION_MAJOR 1 )
 SET( ${PROJECT_NAME}_VERSION_MINOR 0 )
-SET( ${PROJECT_NAME}_VERSION_PATCH 0 )
+SET( ${PROJECT_NAME}_VERSION_PATCH 1 )
 
 ### BUILD OPTIONS ###########################################################
 
@@ -42,9 +42,6 @@ LINK_LIBRARIES( ${ROOT_LIBRARIES} )
 FIND_PACKAGE( Acts REQUIRED COMPONENTS Core PluginJson PluginRoot PluginDD4hep )
 
 FIND_PACKAGE( TBB REQUIRED )
-IF( TBB_FOUND )
-    MESSAGE( STATUS "Found TBB library")
-ENDIF()
 
 INCLUDE(GNUInstallDirs)
 
