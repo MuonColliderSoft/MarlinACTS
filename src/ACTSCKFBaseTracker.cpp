@@ -8,7 +8,6 @@
 #include <IMPL/LCFlagImpl.h>
 #include <IMPL/TrackerHitPlaneImpl.h>
 
-#include "CollectionHandler.h"
 #include "Measurement.h"
 #include "MeasurementCalibrator.h"
 
@@ -45,6 +44,8 @@ ACTSCKFBaseTracker::ACTSCKFBaseTracker(const string& procname) :
 
     registerProcessorParameter("ThetaTolerance", "Tolerance for theta in rad.",
                                theta_tolerance, 0.01f * static_cast<float>(M_PI));
+
+    registerProcessorParameter("MTCKFMode", "Enable MT mode for CKF", mtckf_mode, false);
 }
 
 void ACTSCKFBaseTracker::init()
@@ -182,52 +183,116 @@ void ACTSCKFBaseTracker::processEvent(LCEvent* evt)
 
     MarlinACTS::CollectionHandler coll_handler { _outputTrackCollection, true, theta_tolerance };
 
-    auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
-    auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
-    TrackContainer tracks(trackContainer, trackStateContainer);
+    ExtrapolationOpts extrapolationOptions(geometryContext(), magneticFieldContext());
 
-    Propagator::template Options<Acts::ActorList<Acts::MaterialInteractor, Acts::EndOfWorldReached>>
-        extrapolationOptions(geometryContext(), magneticFieldContext());
-
-    for (std::size_t iseed = 0; iseed < seeds.size(); ++iseed)
+    if (mtckf_mode)
     {
-        tracks.clear();
-
-        auto result = trackFinder->findTracks(seeds.at(iseed), ckfOptions, tracks);
-        if (!result.ok())
+        tbb::parallel_for(tbb::blocked_range<std::size_t>(0, seeds.size()),
+                          ACTSTrackFinderThread(*this, seeds, coll_handler,
+                                                extrapolationOptions, ckfOptions));
+    }
+    else
+    {
+        for (std::size_t iseed = 0; iseed < seeds.size(); ++iseed)
         {
-            streamlog_out(WARNING) << "Track fit error: " << result.error() << std::endl;
-            _fitFails++;
-            continue;
-        }
-
-        const auto& fitOutput = result.value();
-        for (const auto& trackItem : fitOutput)
-        {
-            auto trackTip = tracks.makeTrack();
-            trackTip.copyFrom(trackItem, true);
-            auto smoothResult = Acts::smoothTrack(geometryContext(), trackTip);
-            if (!smoothResult.ok())
+            try
             {
-                streamlog_out(DEBUG) << "Smooth failure: " << smoothResult.error() << std::endl;
-                continue;
+                runCKFonSeed(seeds.at(iseed), ckfOptions, extrapolationOptions, coll_handler);
+            }
+            catch (std::error_code error)
+            {
+                streamlog_out(DEBUG) << "Track finding failure: " << error << std::endl;
             }
 
-            auto extrapolationResult = Acts::extrapolateTrackToReferenceSurface(
-                trackTip, *perigeeSurface, *propagator, extrapolationOptions,
-                Acts::TrackExtrapolationStrategy::firstOrLast);
-            if (!extrapolationResult.ok())
-            {
-                streamlog_out(DEBUG) << "Extrapolation failure: " 
-                                     << extrapolationResult.error() << std::endl;
-                continue;
-            }
-
-            coll_handler.addTrack(convert_track(trackTip));
         }
     }
 
     coll_handler.process();
 
     coll_handler.saveCollection(evt);
+}
+
+
+/* ********************************************************************************************
+ * The common track finder
+ ******************************************************************************************* */
+void ACTSCKFBaseTracker::runCKFonSeed(Acts::BoundTrackParameters& seed,
+                                      TrackFinderOptions& ckfOptions,
+                                      ExtrapolationOpts& extrapolationOptions,
+                                      MarlinACTS::CollectionHandler& coll_handler)
+{
+    auto trackContainer = std::make_shared<Acts::VectorTrackContainer>();
+    auto trackStateContainer = std::make_shared<Acts::VectorMultiTrajectory>();
+    TrackContainer tracks(trackContainer, trackStateContainer);
+
+    auto result = trackFinder->findTracks(seed, ckfOptions, tracks);
+    if (!result.ok())
+    {
+        if (mtckf_mode)
+        {
+            tbb::queuing_mutex::scoped_lock lock(p_mutex);
+            _fitFails++;
+        }
+        else _fitFails++;
+        throw result.error();
+    }
+
+    const auto& fitOutput = result.value();
+    for (const auto& trackItem : fitOutput)
+    {
+        auto trackTip = tracks.makeTrack();
+        trackTip.copyFrom(trackItem, true);
+        auto smoothResult = Acts::smoothTrack(geometryContext(), trackTip);
+        if (!smoothResult.ok())
+        {
+            if (mtckf_mode)
+            {
+                tbb::queuing_mutex::scoped_lock lock(p_mutex);
+                _fitFails++;
+            }
+            else _fitFails++;
+            throw smoothResult.error();
+        }
+
+        auto extrapolationResult = Acts::extrapolateTrackToReferenceSurface(
+            trackTip, *perigeeSurface, *propagator, extrapolationOptions,
+            Acts::TrackExtrapolationStrategy::firstOrLast);
+        if (!extrapolationResult.ok())
+        {
+            if (mtckf_mode)
+            {
+                tbb::queuing_mutex::scoped_lock lock(p_mutex);
+                _fitFails++;
+            }
+            else _fitFails++;
+            throw extrapolationResult.error();
+        }
+
+        if (mtckf_mode)
+        {
+            tbb::queuing_mutex::scoped_lock lock(p_mutex);
+            coll_handler.addTrack(convert_track(trackTip));
+        }
+        else coll_handler.addTrack(convert_track(trackTip));
+    }
+}
+
+/* ********************************************************************************************
+ * Functor for MT CKF
+ ******************************************************************************************* */
+void ACTSTrackFinderThread::operator()
+    (const tbb::blocked_range<std::size_t>& prange) const
+{
+    for (std::size_t iseed = prange.begin(); iseed != prange.end(); ++iseed)
+    {
+        try
+        {
+            processor.runCKFonSeed(paramseeds.at(iseed), ckfFinderOptions,
+                                   extrapolOptions, trackCollection);
+        }
+        catch (std::error_code error)
+        {
+            // TODO synchronized log
+        }
+    }
 }

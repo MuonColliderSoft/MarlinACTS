@@ -41,6 +41,11 @@ LINK_LIBRARIES( ${ROOT_LIBRARIES} )
 
 FIND_PACKAGE( Acts REQUIRED COMPONENTS Core PluginJson PluginRoot PluginDD4hep )
 
+FIND_PACKAGE( TBB REQUIRED )
+IF( TBB_FOUND )
+    MESSAGE( STATUS "Found TBB library")
+ENDIF()
+
 INCLUDE(GNUInstallDirs)
 
 ### DATA ###########################################################
@@ -48,6 +53,7 @@ ADD_SUBDIRECTORY(data)
 
 ### LIBRARY #################################################################
 ADD_DEFINITIONS( "-Wno-long-long -Wno-effc++ -Wno-unused-parameter -Wno-narrowing" )
+ADD_COMPILE_DEFINITIONS( "TBB_ENABLED" )
 
 # sources
 ADD_LIBRARY(MarlinACTS SHARED src/ACTSBaseTracker.cpp
@@ -68,6 +74,7 @@ TARGET_INCLUDE_DIRECTORIES(MarlinACTS PRIVATE
                                       ${LCIO_INCLUDE_DIRS})
 
 TARGET_LINK_LIBRARIES(MarlinACTS ${ROOT_LIBRARIES}
+                                 TBB::tbb
                                  DD4hep::DDCore
                                  ActsCore
                                  ActsPluginRoot
