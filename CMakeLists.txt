@@ -43,6 +43,8 @@ FIND_PACKAGE( Acts REQUIRED COMPONENTS Core PluginJson PluginRoot PluginDD4hep )
 
 FIND_PACKAGE( TBB REQUIRED )
 
+FIND_PACKAGE( Lua REQUIRED )
+
 INCLUDE(GNUInstallDirs)
 
 ### DATA ###########################################################
@@ -59,6 +61,7 @@ ADD_LIBRARY(MarlinACTS SHARED src/ACTSBaseTracker.cpp
                               src/ACTSCKFTruthTracker.cpp
                               src/CollectionHandler.cpp
                               src/GeometryIdMappingTool.cpp
+                              src/LuaGeometryIDMapper.cpp
                               src/GeometryIdSelector.cpp
                               src/Helpers.cpp)
 
@@ -72,6 +75,7 @@ TARGET_INCLUDE_DIRECTORIES(MarlinACTS PRIVATE
 
 TARGET_LINK_LIBRARIES(MarlinACTS ${ROOT_LIBRARIES}
                                  TBB::tbb
+                                 ${LUA_LIBRARIES}
                                  DD4hep::DDCore
                                  ActsCore
                                  ActsPluginRoot
