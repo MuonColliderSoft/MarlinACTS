@@ -15,6 +15,8 @@ SET( ${PROJECT_NAME}_VERSION_PATCH 1 )
 set(PACKAGE_INSTALL_LIB_DIR lib CACHE PATH "Installation directory for libraries")
 set(PACKAGE_INSTALL_INC_DIR include CACHE PATH "Installation directory for headers")
 
+OPTION( OLDGEOMAPPER "Use the original geometry ID mapper" OFF )
+
 ### DEPENDENCIES ############################################################
 
 FIND_PACKAGE( ILCUTIL REQUIRED COMPONENTS ILCSOFT_CMAKE_MODULES )
@@ -43,7 +45,12 @@ FIND_PACKAGE( Acts REQUIRED COMPONENTS Core PluginJson PluginRoot PluginDD4hep )
 
 FIND_PACKAGE( TBB REQUIRED )
 
-FIND_PACKAGE( Lua REQUIRED )
+IF( OLDGEOMAPPER )
+    MESSAGE( STATUS "Selected Original Mapper" )
+ELSE()
+    MESSAGE( STATUS "Selected Lua Mapper" )
+    FIND_PACKAGE( Lua REQUIRED )
+ENDIF()
 
 INCLUDE(GNUInstallDirs)
 
@@ -52,18 +59,27 @@ ADD_SUBDIRECTORY(data)
 
 ### LIBRARY #################################################################
 ADD_DEFINITIONS( "-Wno-long-long -Wno-effc++ -Wno-unused-parameter -Wno-narrowing" )
-ADD_COMPILE_DEFINITIONS( "TBB_ENABLED" )
+IF( OLDGEOMAPPER )
+    ADD_COMPILE_DEFINITIONS( "-DOLDGEOMAPPER" )
+ENDIF()
 
 # sources
-ADD_LIBRARY(MarlinACTS SHARED src/ACTSBaseTracker.cpp
-                              src/ACTSCKFBaseTracker.cpp
-                              src/ACTSCKFSeededTracker.cpp
-                              src/ACTSCKFTruthTracker.cpp
-                              src/CollectionHandler.cpp
-                              src/GeometryIdMappingTool.cpp
-                              src/LuaGeometryIDMapper.cpp
-                              src/GeometryIdSelector.cpp
-                              src/Helpers.cpp)
+SET( SRCFILES src/ACTSBaseTracker.cpp
+              src/ACTSCKFBaseTracker.cpp
+              src/ACTSCKFSeededTracker.cpp
+              src/ACTSCKFTruthTracker.cpp
+              src/CollectionHandler.cpp
+              src/GeometryIdSelector.cpp
+              src/Helpers.cpp)
+IF( OLDGEOMAPPER )
+    LIST( APPEND SRCFILES src/GeometryIdMappingTool.cpp)
+ELSE()
+    LIST( APPEND SRCFILES src/LuaGeometryIDMapper.cpp)
+ENDIF()
+
+ADD_LIBRARY(MarlinACTS SHARED ${SRCFILES})
+
+MESSAGE( STATUS "SOURCES ${SRCFILES}")
 
 TARGET_INCLUDE_DIRECTORIES(MarlinACTS PRIVATE
                                       ./include
@@ -75,12 +91,15 @@ TARGET_INCLUDE_DIRECTORIES(MarlinACTS PRIVATE
 
 TARGET_LINK_LIBRARIES(MarlinACTS ${ROOT_LIBRARIES}
                                  TBB::tbb
-                                 ${LUA_LIBRARIES}
                                  DD4hep::DDCore
                                  ActsCore
                                  ActsPluginRoot
                                  ActsPluginJson
                                  ActsPluginDD4hep)
+
+IF( NOT OLDGEOMAPPER )
+    TARGET_LINK_LIBRARIES(MarlinACTS ${LUA_LIBRARIES})
+ENDIF()
 
 INSTALL( TARGETS MarlinACTS DESTINATION ${PACKAGE_INSTALL_LIB_DIR} )
 INSTALL( DIRECTORY MarlinACTS DESTINATION ${PACKAGE_INSTALL_INC_DIR}

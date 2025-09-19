@@ -30,9 +30,7 @@
 #include "SourceLink.h"
 
 #include <string>
-
-using MarlinACTS::GeometryIdMappingTool;
-using DetSchema = GeometryIdMappingTool::DetSchema;
+#include <sstream>
 
 ACTSBaseTracker::ACTSBaseTracker(const string& procname) :
     Processor(procname)
@@ -99,6 +97,7 @@ void ACTSBaseTracker::init()
 
     _magCache = _magneticField->makeCache(_magneticFieldContext);
 
+#ifdef OLDGEOMAPPER
     DetSchema dSchema;
     if (_detSchema == "MuSIC_v1") dSchema = DetSchema::MuSIC_v1;
     else if (_detSchema == "MuSIC_v2") dSchema = DetSchema::MuSIC_v2;
@@ -108,6 +107,7 @@ void ACTSBaseTracker::init()
 
     _geoIDMappingTool = std::make_shared<GeometryIdMappingTool>(
         lcio::LCTrackerCellID::encoding_string(), dSchema);
+#endif
 
     Navigator::Config navigatorCfg { trackingGeometry() };
     navigatorCfg.resolvePassive = false;
@@ -376,6 +376,17 @@ void ACTSBaseTracker::buildDetector()
         _detectorStore.insert(_detectorStore.begin(), detElements.begin(),
                               detElements.end());
     }
+
+#ifndef OLDGEOMAPPER
+    std::stringstream script_buff;
+    for (auto line : tgeodesc["idmapper"])
+    {
+        std::string tmps = to_string(line);
+        script_buff << tmps.substr(1, tmps.size() - 2) << "\n";
+    }
+    _geoIDMappingTool = std::make_shared<LuaGeometryIDMapper>(script_buff.str(),
+        lcio::LCTrackerCellID::encoding_string());
+#endif
 
     // Restore old gGeoManager
     if (gGeoManagerOld != nullptr) gGeoManager = gGeoManagerOld;

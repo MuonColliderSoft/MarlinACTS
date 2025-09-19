@@ -18,15 +18,25 @@
 
 #include <marlin/Processor.h>
 
-#include "GeometryIdMappingTool.h"
-
 #include <IMPL/LCCollectionVec.h>
 #include <EVENT/Track.h>
 #include <EVENT/TrackState.h>
 
 #include <memory>
 
+#ifdef OLDGEOMAPPER
+
+#include "GeometryIdMappingTool.h"
 using MarlinACTS::GeometryIdMappingTool;
+using DetSchema = GeometryIdMappingTool::DetSchema;
+
+#else
+
+#include "LuaGeometryIDMapper.h"
+using MarlinACTS::LuaGeometryIDMapper;
+
+#endif
+
 using std::string;
 using std::vector;
 
@@ -79,8 +89,12 @@ protected:
     std::shared_ptr<Acts::CylinderSurface> caloSurface;
     std::shared_ptr<Acts::DiscSurface> caloCapL;
     std::shared_ptr<Acts::DiscSurface> caloCapR;
-    
+
+#ifdef OLDGEOMAPPER
     std::shared_ptr<GeometryIdMappingTool> geoIDMappingTool() const { return _geoIDMappingTool; }
+#else
+    std::shared_ptr<LuaGeometryIDMapper> geoIDMappingTool() const { return _geoIDMappingTool; }
+#endif
 
     const Acts::MagneticFieldContext& magneticFieldContext() const { return _magneticFieldContext; }
 
@@ -108,7 +122,11 @@ private:
 
     void buildBfield();
 
+#ifdef OLDGEOMAPPER
     std::shared_ptr<GeometryIdMappingTool> _geoIDMappingTool;
+#else
+    std::shared_ptr<LuaGeometryIDMapper> _geoIDMappingTool;
+#endif 
 
     Acts::MagneticFieldContext _magneticFieldContext;
     std::shared_ptr<Acts::MagneticFieldProvider> _magneticField;
