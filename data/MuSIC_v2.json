@@ -316,7 +316,7 @@
         "    if system == -2 then return 8 - layer end",
         "    if system == 1 or system == 2 then return layer + 2 end",
         "    if system == 3 and layer == 2 then return 2 * (2 - layer) + 2 end",
-        "    if system == 3 or layer == 5 then return 2 * layer + 2 end",
+        "    if system == 3 or system == 5 then return 2 * layer + 2 end",
         "    if system == -4 and layer ~= 0 then return 2 * (7 - layer) end",
         "    if system == 4 and layer ~= 0 then return 2 * layer end",
         "    if system == -4 then return 2 - 2 * layer end",
