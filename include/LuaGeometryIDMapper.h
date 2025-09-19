@@ -11,10 +11,13 @@
 
 #include <string>
 #include <unordered_map>
+#include <optional>
 
 using std::string;
+using std::optional;
 
 using ObjectMap = std::unordered_map<uint32_t, uint64_t>;
+using OptMapID = optional<uint64_t>;
 
 namespace MarlinACTS {
 
@@ -43,9 +46,13 @@ private:
     static const int32_t OuterTrackerBarrel;
     static const int32_t OuterTrackerEndCapPositive;
 
-    uint32_t hash(uint32_t systemID, uint32_t layerID);
+    uint32_t hash(int32_t sideID, uint32_t systemID, uint32_t layerID);
+    OptMapID call_map(string fnct, int32_t systemID, uint32_t layerID);
+    OptMapID call_map(string fnct, int32_t systemID, uint32_t layerID,
+                      uint32_t ladderID, uint32_t moduleID);
     uint64_t map_volume(uint32_t systemID, uint32_t layerID);
     uint64_t map_layer(uint32_t systemID, uint32_t layerID);
+    uint64_t map_sensor(uint32_t systemID, uint32_t layerID, uint32_t ladderID, uint32_t moduleID);
 
     string _encoderString;
     lua_State* l_ctx;
@@ -53,6 +60,7 @@ private:
     // Caches for volumes, layers and sensitives
     ObjectMap volume_map;
     ObjectMap layer_map;
+    ObjectMap nlad_map;
 };
 
 }  // namespace MarlinACTS

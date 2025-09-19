@@ -22,7 +22,11 @@ LuaGeometryIDMapper::LuaGeometryIDMapper(const string& script, const string& enc
     luaL_openlibs(l_ctx);
     if (luaL_loadstring(l_ctx, script.c_str()) != LUA_OK)
     {
-        // TODO missing error handling
+        throw "Script loading failure";
+    }
+    if (lua_pcall(l_ctx, 0, 0, 0) == LUA_OK)
+    {
+        lua_pop(l_ctx, lua_gettop(l_ctx));
     }
 }
 
@@ -61,79 +65,111 @@ Acts::GeometryIdentifier LuaGeometryIDMapper::getGeometryID(uint32_t systemID,
     uint64_t geometry_id = 0;
 
     // endcap is split in +/- sides by ACTS
-    int32_t signSystemID = (sideID < 0) ? -systemID : systemID;
+    int32_t signSystemID = (sideID < 0) ? -1 * systemID : systemID;
 
-    uint64_t volume_id = map_volume(signSystemID, layerID);
-    geometry_id |= volume_id << (14 * 4);
+    uint32_t key = hash(sideID, systemID, layerID);
 
-    uint64_t layer_id = map_layer(signSystemID, layerID);
-    geometry_id |= layer_id << (9 * 4);
+    // map volume id
+    if (volume_map.find(key) == volume_map.end())
+    {
+        auto vol_id = call_map("getVolumeID", signSystemID, layerID);
+        if (vol_id) volume_map.emplace(key, vol_id.value());
+    }
+    geometry_id |= volume_map[key] << (14 * 4);
 
+    // map layer id
+    if (layer_map.find(key) == layer_map.end())
+    {
+        auto lay_id = call_map("getLayerID", signSystemID, layerID);
+        if (lay_id) layer_map.emplace(key, lay_id.value());
+    }
+    geometry_id |= layer_map[key] << (9 * 4);
+
+    // map sensitive id
+    uint64_t sens_id = 0;
+    if (nlad_map.find(key) != nlad_map.end())
+    {
+        sens_id = nlad_map[key] * ladderID + moduleID + 1;
+    }
+    else
+    {
+        auto lad_num = call_map("getLadderNumber", signSystemID, layerID);
+        if (lad_num)
+        {
+            nlad_map.emplace(key, lad_num.value());
+            sens_id = nlad_map[key] * ladderID + moduleID + 1;
+        }
+        else
+        {
+            auto res = call_map("getSensorID", signSystemID, layerID, ladderID, moduleID);
+            if (res) sens_id = res.value();
+        }
+    }
+    geometry_id |= sens_id << (2 * 4);
 
     return Acts::GeometryIdentifier { geometry_id };
 }
 
-
-
-
-uint32_t LuaGeometryIDMapper::hash(uint32_t systemID, uint32_t layerID)
+uint32_t LuaGeometryIDMapper::hash(int32_t sideID, uint32_t systemID, uint32_t layerID)
 {
-    return 0;
+    uint32_t res = systemID * 10000 + layerID;
+    return sideID < 0 ? 1000000 + res : res;
 }
 
-uint64_t LuaGeometryIDMapper::map_volume(uint32_t systemID, uint32_t layerID)
+OptMapID LuaGeometryIDMapper::call_map(string fnct, int32_t systemID, uint32_t layerID)
 {
-    uint32_t key = hash(systemID, layerID);
-    if (volume_map.find(key) != volume_map.end()) return volume_map[key];
-
-    lua_getglobal(l_ctx, "getVolumeID");
+    lua_getglobal(l_ctx, fnct.c_str());
     if (not lua_isfunction(l_ctx, -1))
     {
-        // TODO missing error handling
+        throw "Not a function";
     }
     lua_pushinteger(l_ctx, systemID);
     lua_pushinteger(l_ctx, layerID);
-    if (lua_pcall(l_ctx, 2, 1, 0) == LUA_OK and lua_isinteger(l_ctx, -1))
+    if (lua_pcall(l_ctx, 2, 1, 0) == LUA_OK)
     {
-        uint64_t res = lua_tointeger(l_ctx, -1);
-        volume_map.emplace(key, res);
-        lua_pop(l_ctx, 1);
-        return res;
+        if (lua_isinteger(l_ctx, -1))
+        {
+            uint64_t res = lua_tointeger(l_ctx, -1);
+            lua_pop(l_ctx, 1);
+            return res;
+        }
+        else if (lua_isnil(l_ctx, -1))
+        {
+            return std::nullopt;
+        }
     }
     lua_pop(l_ctx, 1);
-    // TODO missing error handling
-    return -1;
+    throw "Call failure";
 }
 
-uint64_t LuaGeometryIDMapper::map_layer(uint32_t systemID, uint32_t layerID)
+OptMapID LuaGeometryIDMapper::call_map(string fnct, int32_t systemID, uint32_t layerID,
+                                       uint32_t ladderID, uint32_t moduleID)
 {
-    uint32_t key = hash(systemID, layerID);
-    if (layer_map.find(key) != layer_map.end()) return layer_map[key];
-
-    lua_getglobal(l_ctx, "getLayerID");
+    lua_getglobal(l_ctx, fnct.c_str());
     if (not lua_isfunction(l_ctx, -1))
     {
-        // TODO missing error handling
+        throw "Not a function";
     }
     lua_pushinteger(l_ctx, systemID);
     lua_pushinteger(l_ctx, layerID);
-    if (lua_pcall(l_ctx, 2, 1, 0) == LUA_OK and lua_isinteger(l_ctx, -1))
+    lua_pushinteger(l_ctx, ladderID);
+    lua_pushinteger(l_ctx, moduleID);
+    if (lua_pcall(l_ctx, 4, 1, 0) == LUA_OK)
     {
-        uint64_t res = lua_tointeger(l_ctx, -1);
-        layer_map.emplace(key, res);
-        lua_pop(l_ctx, 1);
-        return res;
+        if (lua_isinteger(l_ctx, -1))
+        {
+            uint64_t res = lua_tointeger(l_ctx, -1);
+            lua_pop(l_ctx, 1);
+            return res;
+        }
+        else if (lua_isnil(l_ctx, -1))
+        {
+            return std::nullopt;
+        }
     }
     lua_pop(l_ctx, 1);
-    // TODO missing error handling
-    return -1;
+    throw "Call failure";
 }
-
-
-
-
-
-
 
 
 
