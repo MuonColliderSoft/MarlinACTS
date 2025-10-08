@@ -104,10 +104,10 @@ void ACTSCKFSeededTracker::init()
         Acts::GeometryIdentifier geoid;
         if (_seedingLayers[i + 0] != "*")
             // volume
-            geoid = geoid.setVolume(std::stoi(_seedingLayers[i + 0]));
+            geoid = geoid.withVolume(std::stoi(_seedingLayers[i + 0]));
         if (_seedingLayers[i + 1] != "*")
             // layer
-            geoid = geoid.setLayer(std::stoi(_seedingLayers[i + 1]));
+            geoid = geoid.withLayer(std::stoi(_seedingLayers[i + 1]));
 
         geoSelection.push_back(geoid);
     }
