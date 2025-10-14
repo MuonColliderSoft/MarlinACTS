@@ -90,6 +90,8 @@ TARGET_INCLUDE_DIRECTORIES(MarlinACTS PRIVATE
                                       ${Marlin_INCLUDE_DIRS}
                                       ${ROOT_INCLUDE_DIRS}
                                       ${DD4hep_INCLUDE_DIRS}
+                                      ${LUA_INCLUDE_DIR}
+                                      ${EIGEN3_INCLUDE_DIRS}
                                       ${LCIO_INCLUDE_DIRS})
 
 TARGET_LINK_LIBRARIES(MarlinACTS ${ROOT_LIBRARIES}
