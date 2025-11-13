@@ -5,7 +5,7 @@
 #include <Acts/Geometry/TrackingGeometry.hpp>
 #include <Acts/MagneticField/MagneticFieldContext.hpp>
 #include <Acts/MagneticField/MagneticFieldProvider.hpp>
-#include <Acts/Plugins/Root/TGeoDetectorElement.hpp>
+#include <ActsPlugins/Root/TGeoDetectorElement.hpp>
 #include <Acts/Utilities/CalibrationContext.hpp>
 #include <Acts/Propagator/EigenStepper.hpp>
 #include <Acts/Propagator/Navigator.hpp>
@@ -43,7 +43,7 @@ using std::vector;
 class ACTSBaseTracker : public marlin::Processor
 {
 public:
-    using DetectorElementPtr = std::shared_ptr<const Acts::TGeoDetectorElement>;
+    using DetectorElementPtr = std::shared_ptr<const ActsPlugins::TGeoDetectorElement>;
     using DetectorStore = vector<DetectorElementPtr>;
 
     ACTSBaseTracker(const ACTSBaseTracker&) = delete;
